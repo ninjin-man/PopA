@@ -1,373 +1,456 @@
 "use strict";
 
-/* ---------------------------------------------------------------------
-   0. 基本セットアップ & 定数定義
---------------------------------------------------------------------- */
-const canvas = document.getElementById('screen');
-const ctx = canvas.getContext('2d');
-ctx.imageSmoothingEnabled = false;
+const CANVAS = document.getElementById("gameCanvas");
+const ctx = CANVAS.getContext("2d");
 
-const PAL = ['#0f380f', '#306230', '#8bac0f', '#9bbc0f']; // 0=最暗 .. 3=最明
-const TILE = 16, COLS = 10, ROWS = 9; // 160x144 画面サイズ
+const TILE = 16;
+const PAL = ['#0f380f', '#306230', '#8bac0f', '#9bbc0f'];
 
-/* ---------------------------------------------------------------------
-   1. 擬似RNG: DIVレジスタ風タイマー + 加算式ジェネレータ
---------------------------------------------------------------------- */
-const RNG = {
-  div: 0,        // 毎フレーム加算されるタイマー（DIVレジスタの模倣）
-  state: 0x5A,   // 内部状態シード
-  tickDiv(){
-    this.div = (this.div + 1) & 0xFF;
+// 各シーン共通のゲーム状態管理
+const GAME = {
+  scene: 'field', // 'field', 'battle', 'status'
+  party: [],
+  box: [],
+  activeIndex: 0,
+  stepCount: 0,
+  items: { 
+    'きずぐすり': 5, 
+    'モンスターボール': 5, 
+    'スーパーボール': 5, 
+    'ハイパーボール': 5 
   },
-  // 0-255 の擬似乱数を1バイト生成する
-  next(){
-    this.state = (this.state + this.div + 0x1D) & 0xFF;
-    this.state = ((this.state << 1) | (this.state >> 7)) & 0xFF;
-    this.state = (this.state ^ this.div) & 0xFF;
-    return this.state;
-  }
+  currentMessage: null,
+  statusCursor: 0, // 0:パーティ交換, 1:レポート(セーブ)
+  mapId: 0,
+  battle: null
 };
-function rngByte(){ return RNG.next(); }
-function rngRange(maxExclusive){ // 0 .. maxExclusive-1
-  return Math.floor(rngByte() / 256 * maxExclusive);
+
+const player = { x: 4, y: 4, dir: 'down', moveCooldown: 0 };
+
+let stepQueue = [];
+let rngState = 0x1234;
+
+function rngByte() {
+  rngState = (rngState * 5 + 1) & 0xFFFF;
+  return rngState >> 8;
 }
+function rngRange(max) { return rngByte() % max; }
 
 /* ---------------------------------------------------------------------
-   2. 種族データ（オリジナル・モンスター）
+   種族データ（catchRate を追加）
 --------------------------------------------------------------------- */
-const TYPE_EMOJI = {
-  'いわ':'🪨', 'くさ':'🌿', 'でんき':'⚡', 'エスパー':'🔮',
-  'ノーマル':'⬜', 'どく':'☠️', 'みず':'💧'
-};
+const SPECIES = [
+  { id: 0, name: "ゴウラン", type: 0, base: { hp: 45, atk: 49, def: 49, spd: 45, spc: 65 }, catchRate: 45 },
+  { id: 1, name: "リーフィ", type: 0, base: { hp: 60, atk: 62, def: 63, spd: 60, spc: 80 }, catchRate: 45 },
+  { id: 2, name: "ボムリン", type: 1, base: { hp: 39, atk: 52, def: 43, spd: 65, spc: 50 }, catchRate: 190 },
+  { id: 3, name: "ミュート", type: 1, base: { hp: 106, atk: 110, def: 90, spd: 130, spc: 154 }, catchRate: 3 },
+  { id: 4, name: "カラブ", type: 2, base: { hp: 44, atk: 48, def: 65, spd: 43, spc: 50 }, catchRate: 255 },
+  { id: 5, name: "ポイズン", type: 2, base: { hp: 59, atk: 63, def: 80, spd: 58, spc: 65 }, catchRate: 120 },
+  { id: 6, name: "ロックス", type: 3, base: { hp: 35, atk: 55, def: 40, spd: 90, spc: 50 }, catchRate: 60 },
+  { id: 7, name: "スイーピョ", type: 3, base: { hp: 65, atk: 70, def: 60, spd: 115, spc: 65 }, catchRate: 190 }
+];
 
-const SPECIES = {
-  0x01: { id:0x01, name:'ゴウラン',   type:'いわ',    base:{hp:105,atk:130,def:120,spd:40, spc:45 }, moves:['tackle','rockslide'] },
-  0x02: { id:0x02, name:'リーフィ',   type:'くさ',    base:{hp:45, atk:49, def:49, spd:45, spc:65 }, moves:['tackle','vinewhip','leechseed'] },
-  0x03: { id:0x03, name:'ボムリン',   type:'でんき',  base:{hp:50, atk:55, def:40, spd:90, spc:50 }, moves:['tackle','thundershock'] },
-  0x04: { id:0x04, name:'ミュート',   type:'エスパー',base:{hp:100,atk:100,def:100,spd:100,spc:100}, moves:['tackle','watergun'] },
-  0x05: { id:0x05, name:'カラブ',     type:'ノーマル',base:{hp:35, atk:55, def:30, spd:72, spc:20 }, moves:['tackle'] },
-  0x06: { id:0x06, name:'ポイズン',   type:'どく',    base:{hp:48, atk:48, def:65, spd:43, spc:50 }, moves:['tackle','toxic'] },
-  0x07: { id:0x07, name:'ロックス',   type:'いわ',    base:{hp:40, atk:80, def:100,spd:20, spc:30 }, moves:['tackle','rockslide'] },
-  0x08: { id:0x08, name:'スイーピョ', type:'みず',    base:{hp:40, atk:50, def:40, spd:90, spc:40 }, moves:['tackle','watergun'] },
-};
+const TYPE_NAMES = ["くさ", "ほのお", "みず", "でんき"];
+const TYPE_EMOJI = ["🍃", "🔥", "💧", "⚡"];
 
-const MOVES = {
-  tackle:       { id:'tackle',       name:'たいあたり',     type:'ノーマル', category:'physical', power:40, accuracy:100, basePp:35 },
-  vinewhip:     { id:'vinewhip',     name:'つるのムチ',     type:'くさ',     category:'physical', power:35, accuracy:100, basePp:25 },
-  leechseed:    { id:'leechseed',    name:'やどりぎのタネ', type:'くさ',     category:'status',   power:0,  accuracy:90,  basePp:15 },
-  thundershock: { id:'thundershock', name:'でんきショック', type:'でんき',   category:'special',  power:40, accuracy:100, basePp:30 },
-  watergun:     { id:'watergun',     name:'みずでっぽう',   type:'みず',     category:'special',  power:40, accuracy:100, basePp:25 },
-  rockslide:    { id:'rockslide',    name:'いわおとし',     type:'いわ',     category:'physical', power:75, accuracy:90,  basePp:10 },
-  toxic:        { id:'toxic',        name:'どくどく',       type:'どく',     category:'status',   power:0,  accuracy:90,  basePp:10 },
-};
-
-// 10スロットの野生エンカウントテーブル
-const SLOT_WEIGHTS = [40,40,35,30,25,20,20,15,15,15]; // 合計255
-const ENCOUNTER_TABLE = [
-  { sp:0x05, lvl:[2,4] }, { sp:0x05, lvl:[3,5] }, { sp:0x06, lvl:[2,5] },
-  { sp:0x02, lvl:[3,5] }, { sp:0x08, lvl:[3,6] }, { sp:0x07, lvl:[4,6] },
-  { sp:0x03, lvl:[4,7] }, { sp:0x01, lvl:[5,8] }, { sp:0x06, lvl:[5,8] },
-  { sp:0x04, lvl:[7,9] },
+const MOVES = [
+  { id: 'tackle', name: "たいあたり", power: 35, accuracy: 95, type: 0, category: 'physical', maxPp: 35 },
+  { id: 'vine', name: "つるのむち", power: 35, accuracy: 100, type: 0, category: 'special', maxPp: 10 },
+  { id: 'ember', name: "ひのこ", power: 40, accuracy: 100, type: 1, category: 'special', maxPp: 25 },
+  { id: 'bubble', name: "あわ", power: 20, accuracy: 100, type: 2, category: 'special', maxPp: 30 },
+  { id: 'shock', name: "でんきショック", power: 40, accuracy: 100, type: 3, category: 'special', maxPp: 30 },
+  { id: 'toxic', name: "どくどく", power: 0, accuracy: 85, type: 0, category: 'status', maxPp: 10 },
+  { id: 'leechseed', name: "やどりぎのタネ", power: 0, accuracy: 90, type: 0, category: 'status', maxPp: 10 }
 ];
 
 /* ---------------------------------------------------------------------
-   3. ステータス/DV計算ロジック
+   広大化マップ ＆ 複数マップ（ワープ・NPC・看板）定義
 --------------------------------------------------------------------- */
-function expForLevel(lv){ return Math.pow(lv, 3); }
-
-function calcLevelFromExp(exp){
-  let lv = 1;
-  while (lv < 100 && expForLevel(lv + 1) <= exp) lv++;
-  return lv;
-}
-
-function calcStat(base, dv, level, isHP){
-  if (isHP) return Math.floor(((base + dv) * 2 * level) / 100) + level + 10;
-  return Math.floor(((base + dv) * 2 * level) / 100) + 5;
-}
-
-function rollDVs(slotIndex){
-  const b1 = rngByte(), b2 = rngByte();
-  let atk = (b1 >> 4) & 0xF, def = b1 & 0xF;
-  let spd = (b2 >> 4) & 0xF, spc = b2 & 0xF;
-  if (slotIndex >= 7) { // レアスロット制約の再現
-    spc = spc & 0xD;
-    spd = spd & 0xE;
+const MAPS = [
+  {
+    id: 0,
+    name: "マサラフィールド",
+    cols: 20, rows: 18,
+    encounter: true,
+    // 2:木, 1:草むら, 0:道, 4:建物ドア(進入可)
+    tiles: [
+      2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
+      2,0,0,0,0,0,0,2,2,2,0,0,0,0,0,0,0,0,0,2,
+      2,0,1,1,1,1,0,2,2,2,0,1,1,1,1,1,1,1,0,2,
+      2,0,1,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1,0,2,
+      2,0,0,0,0,0,0,2,2,2,0,0,0,0,0,1,1,1,0,2,
+      2,2,2,2,2,2,0,2,2,2,2,2,4,2,0,0,0,0,0,2,
+      2,2,2,2,2,2,0,2,2,2,2,2,0,2,0,2,2,2,2,2,
+      2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2,2,2,2,
+      2,0,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,2,
+      2,0,1,1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,0,2,
+      2,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,0,2,
+      2,2,2,2,2,2,2,2,2,0,0,1,1,1,1,1,1,1,0,2,
+      2,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,2,
+      2,0,1,1,1,1,1,0,2,0,1,1,1,1,1,1,1,1,0,2,
+      2,0,1,1,1,1,1,0,2,0,1,1,1,1,1,1,1,1,0,2,
+      2,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,0,0,0,2,
+      2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,
+      2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2
+    ],
+    warps: [
+      { x: 12, y: 5, targetMap: 1, targetX: 4, targetY: 7 } // 建物に入る
+    ],
+    objects: [
+      { x: 5, y: 3, type: 'sign', name: 'かんばん', text: '【おしらせ】ここに ウルトラな かいじゅうの かんばん がある。' },
+      { x: 14, y: 8, type: 'npc', name: 'たんぱんこぞう', text: 'くさむら の なか は モンスター が とびだすぞ！' }
+    ]
+  },
+  {
+    id: 1,
+    name: "ポケモンラボ",
+    cols: 10, rows: 9,
+    encounter: false,
+    tiles: [
+      2,2,2,2,2,2,2,2,2,2,
+      2,0,0,0,0,0,0,0,0,2,
+      2,0,0,0,0,0,0,0,0,2,
+      2,0,0,0,0,0,0,0,0,2,
+      2,0,0,0,0,0,0,0,0,2,
+      2,0,0,0,0,0,0,0,0,2,
+      2,0,0,0,0,0,0,0,0,2,
+      2,2,2,2,0,2,2,2,2,2,
+      2,2,2,2,0,2,2,2,2,2
+    ],
+    warps: [
+      { x: 4, y: 8, targetMap: 0, targetX: 12, targetY: 6 } // 外に出る
+    ],
+    objects: [
+      { x: 4, y: 2, type: 'npc', name: 'ジョーイさん', text: 'ラボ へ ようこそ！ ポケモン の キズ を かいふく させましょう！', isHealer: true },
+      { x: 1, y: 2, type: 'sign', name: 'パソコン', text: 'パソコン が おいてある。 ボックス の なかみ を かくにん できる。' }
+    ]
   }
-  const hp = ((atk & 1) << 3) | ((def & 1) << 2) | ((spd & 1) << 1) | (spc & 1);
-  return { atk, def, spd, spc, hp };
+];
+
+function tileAt(x, y) {
+  const currentMap = MAPS[GAME.mapId];
+  if (x < 0 || x >= currentMap.cols || y < 0 || y >= currentMap.rows) return 2; // マップ外は通行不可の木(2)
+
+  // NPCなどの衝突判定オブジェクトが存在するかチェック
+  const hasNPC = currentMap.objects.some(o => o.type === 'npc' && o.x === x && o.y === y);
+  if (hasNPC) return 2; // NPCがいるマスは木(2)と同じ進入不可扱いにする
+
+  return currentMap.tiles[y * currentMap.cols + x];
 }
 
-function instantiateMove(id){
-  const m = MOVES[id];
-  return { id:m.id, name:m.name, type:m.type, category:m.category, power:m.power, accuracy:m.accuracy, pp:m.basePp, maxPp:m.basePp };
-}
-
-function makeMon(speciesId, level, slotIndex){
-  const species = SPECIES[speciesId];
-  const dv = rollDVs(slotIndex == null ? 0 : slotIndex);
-  const mon = {
-    species, level, dv,
-    exp: expForLevel(level),
-    status: null,
-    toxicCounter: 0,
-    leechSeeded: false,
-    leechSeedSource: null,
-    moves: species.moves.map(instantiateMove),
-  };
-  recalcStats(mon);
-  mon.curHP = mon.maxHP;
-  return mon;
-}
-
-function recalcStats(mon){
-  const oldMax = mon.maxHP || 0;
-  const oldCur = (mon.curHP == null) ? oldMax : mon.curHP;
-  mon.maxHP = calcStat(mon.species.base.hp, mon.dv.hp, mon.level, true);
-  mon.stat = {
-    atk: calcStat(mon.species.base.atk, mon.dv.atk, mon.level, false),
-    def: calcStat(mon.species.base.def, mon.dv.def, mon.level, false),
-    spd: calcStat(mon.species.base.spd, mon.dv.spd, mon.level, false),
-    spc: calcStat(mon.species.base.spc, mon.dv.spc, mon.level, false),
-  };
-  const diff = mon.maxHP - oldMax;
-  mon.curHP = Math.max(1, Math.min(mon.maxHP, oldCur + Math.max(0, diff)));
-}
+const ENCOUNTER_TABLE = [
+  { sp: 0, lvl: [3, 5] }, { sp: 2, lvl: [2, 4] }, { sp: 4, lvl: [3, 5] }, { sp: 6, lvl: [2, 4] },
+  { sp: 1, lvl: [4, 6] }, { sp: 5, lvl: [4, 6] }, { sp: 7, lvl: [4, 5] }, { sp: 0, lvl: [5, 7] },
+  { sp: 2, lvl: [6, 8] }, { sp: 3, lvl: [10, 12] }
+];
+const SLOT_WEIGHTS = [51, 51, 39, 39, 25, 25, 13, 10, 1, 1];
 
 /* ---------------------------------------------------------------------
-   4. WRAM風 44バイト構造のエンコード/デコード
+   44バイト（WRAM形式）の相互変換
 --------------------------------------------------------------------- */
-function encodeMon44(mon, inBox){
+function encodeMon44(m) {
   const buf = new Uint8Array(44);
-  let i = 0;
-  buf[i++] = mon.species.id;
-  buf[i++] = (mon.curHP >> 8) & 0xFF; buf[i++] = mon.curHP & 0xFF;
-  buf[i++] = inBox ? 0 : mon.level; // ボックス内では0になり経験値逆算フラグとなる仕様
-  buf[i++] = mon.status === 'badpoison' ? 1 : 0;
-  buf[i++] = 0; buf[i++] = 0;
-  buf[i++] = 0;
-  for (let m = 0; m < 4; m++) buf[i++] = mon.moves[m] ? Object.keys(MOVES).indexOf(mon.moves[m].id) + 1 : 0;
-  buf[i++] = 0; buf[i++] = 0;
-  buf[i++] = (mon.exp >> 16) & 0xFF; buf[i++] = (mon.exp >> 8) & 0xFF; buf[i++] = mon.exp & 0xFF;
-  for (let e = 0; e < 5; e++){ buf[i++] = 0; buf[i++] = 0; }
-  buf[i++] = ((mon.dv.atk & 0xF) << 4) | (mon.dv.def & 0xF);
-  buf[i++] = ((mon.dv.spd & 0xF) << 4) | (mon.dv.spc & 0xF);
-  for (let m = 0; m < 4; m++) buf[i++] = mon.moves[m] ? mon.moves[m].pp : 0;
-  buf[i++] = inBox ? 0 : mon.level;
-  buf[i++] = (mon.maxHP >> 8) & 0xFF; buf[i++] = mon.maxHP & 0xFF;
-  buf[i++] = (mon.stat.atk >> 8) & 0xFF; buf[i++] = mon.stat.atk & 0xFF;
-  buf[i++] = (mon.stat.def >> 8) & 0xFF; buf[i++] = mon.stat.def & 0xFF;
-  buf[i++] = (mon.stat.spd >> 8) & 0xFF; buf[i++] = mon.stat.spd & 0xFF;
-  buf[i++] = (mon.stat.spc >> 8) & 0xFF; buf[i++] = mon.stat.spc & 0xFF;
+  buf[0] = m.species.id;
+  buf[1] = m.level;
+  buf[2] = m.curHP >> 8; buf[3] = m.curHP & 0xFF;
+  buf[4] = m.maxHP >> 8; buf[5] = m.maxHP & 0xFF;
+  buf[6] = m.stat.atk; buf[7] = m.stat.def; buf[8] = m.stat.spd; buf[9] = m.stat.spc;
+  buf[10] = m.dv.atk; buf[11] = m.dv.def; buf[12] = m.dv.spd; buf[13] = m.dv.spc; buf[14] = m.dv.hp;
+  buf[15] = m.exp >> 16; buf[16] = (m.exp >> 8) & 0xFF; buf[17] = m.exp & 0xFF;
+  for (let i = 0; i < 4; i++) {
+    if (m.moves[i]) {
+      const idx = MOVES.findIndex(mv => mv.id === m.moves[i].id);
+      buf[18 + i] = idx !== -1 ? idx : 0xFF;
+      buf[22 + i] = m.moves[i].pp;
+    } else {
+      buf[18 + i] = 0xFF; buf[22 + i] = 0;
+    }
+  }
   return buf;
 }
 
-function decodeMon44(buf, speciesId, dvHint, expHint, movesHint){
-  const storedLevel = buf[3];
-  const exp = (buf[14] << 16) | (buf[15] << 8) | buf[16];
-  const level = storedLevel === 0 ? calcLevelFromExp(exp) : storedLevel;
-  const dvByte1 = buf[27], dvByte2 = buf[28];
-  const dv = {
-    atk: (dvByte1 >> 4) & 0xF, def: dvByte1 & 0xF,
-    spd: (dvByte2 >> 4) & 0xF, spc: dvByte2 & 0xF,
+function decodeMon44(buf) {
+  const spId = buf[0];
+  const level = buf[1];
+  const curHP = (buf[2] << 8) | buf[3];
+  const maxHP = (buf[4] << 8) | buf[5];
+  const species = SPECIES[spId] || SPECIES[0];
+  
+  const m = {
+    species, level, curHP, maxHP,
+    stat: { atk: buf[6], def: buf[7], spd: buf[8], spc: buf[9] },
+    dv: { atk: buf[10], def: buf[11], spd: buf[12], spc: buf[13], hp: buf[14] },
+    exp: (buf[15] << 16) | (buf[16] << 8) | buf[17],
+    moves: [], status: null, toxicCounter: 0, leechSeeded: false
   };
+  for (let i = 0; i < 4; i++) {
+    const mvIdx = buf[18 + i];
+    if (mvIdx !== 0xFF && MOVES[mvIdx]) {
+      m.moves.push({ ...MOVES[mvIdx], pp: buf[22 + i] });
+    }
+  }
+  return m;
+}
+
+function makeMon(spId, lvl, slotIndex = 4) {
+  const sp = SPECIES[spId];
+  const dv = { atk: rngRange(16), def: rngRange(16), spd: rngRange(16), spc: rngRange(16), hp: 0 };
   dv.hp = ((dv.atk & 1) << 3) | ((dv.def & 1) << 2) | ((dv.spd & 1) << 1) | (dv.spc & 1);
-  const mon = {
-    species: SPECIES[speciesId], level, dv, exp,
-    status: buf[4] === 1 ? 'badpoison' : null,
-    toxicCounter: 0, leechSeeded:false, leechSeedSource:null,
-    moves: movesHint.map(instantiateMove),
+  if (slotIndex === 9) { dv.atk = 15; dv.def = 15; dv.spd = 15; dv.spc = 15; dv.hp = 15; }
+
+  const baseExp = Math.floor(lvl * lvl * lvl * 0.8);
+  const m = { species: sp, level: lvl, exp: baseExp, dv, moves: [], status: null, toxicCounter: 0, leechSeeded: false };
+  recalcStats(m);
+  m.curHP = m.maxHP;
+
+  let movePool = ['tackle'];
+  if (spId === 0 || spId === 1) movePool.push('vine', 'toxic', 'leechseed');
+  if (spId === 2 || spId === 3) movePool.push('ember', 'toxic');
+  if (spId === 4 || spId === 5) movePool.push('bubble', 'leechseed');
+  if (spId === 6 || spId === 7) movePool.push('shock', 'toxic');
+
+  movePool.slice(0, 4).forEach(id => {
+    const orig = MOVES.find(mv => mv.id === id);
+    if (orig) m.moves.push({ ...orig, pp: orig.maxPp });
+  });
+  return m;
+}
+
+function recalcStats(m) {
+  const b = m.species.base;
+  m.maxHP = Math.floor((b.hp + m.dv.hp) * 2 * m.level / 100) + m.level + 10;
+  m.stat = {
+    atk: Math.floor((b.atk + m.dv.atk) * 2 * m.level / 100) + 5,
+    def: Math.floor((b.def + m.dv.def) * 2 * m.level / 100) + 5,
+    spd: Math.floor((b.spd + m.dv.spd) * 2 * m.level / 100) + 5,
+    spc: Math.floor((b.spc + m.dv.spc) * 2 * m.level / 100) + 5
   };
-  recalcStats(mon);
-  mon.curHP = (buf[1] << 8) | buf[2];
-  if (mon.curHP <= 0) mon.curHP = mon.maxHP;
-  return mon;
 }
 
-function storeToBox(mon){
-  const buf = encodeMon44(mon, true);
-  return { buf, speciesId: mon.species.id, moveIds: mon.moves.map(m => m.id) };
+function calcLevelFromExp(exp) { return Math.min(100, Math.max(1, Math.floor(Math.cbrt(exp / 0.8)))); }
+function activeMon() { return GAME.party[GAME.activeIndex]; }
+function withdrawFromBox(buf44) { return decodeMon44(buf44); }
+
+/* ---------------------------------------------------------------------
+   実機風チェックサム付きセーブ＆ロード
+--------------------------------------------------------------------- */
+function saveGame() {
+  const partyBytes = GAME.party.map(m => Array.from(encodeMon44(m)));
+  const boxBytes = GAME.box.map(b => Array.from(b));
+
+  const saveData = {
+    mapId: GAME.mapId,
+    playerX: player.x,
+    playerY: player.y,
+    playerDir: player.dir,
+    stepCount: GAME.stepCount,
+    items: GAME.items,
+    party: partyBytes,
+    box: boxBytes
+  };
+
+  const jsonStr = JSON.stringify(saveData);
+  // チェックサム算出: 全文字コードの合計を0xFFで割った余りを反転
+  let sum = 0;
+  for (let i = 0; i < jsonStr.length; i++) {
+    sum += jsonStr.charCodeAt(i);
+  }
+  const checksum = (~sum) & 0xFF;
+
+  const wrappedData = { payload: jsonStr, checksum: checksum };
+  localStorage.setItem("minimon_sav_data", JSON.stringify(wrappedData));
+  console.log("セーブ成功: レポートを書き込みました。");
 }
-function withdrawFromBox(boxEntry){
-  return decodeMon44(boxEntry.buf, boxEntry.speciesId, null, null, boxEntry.moveIds);
+
+function loadGame() {
+  const saved = localStorage.getItem("minimon_sav_data");
+  if (!saved) return false;
+
+  try {
+    const wrapped = JSON.parse(saved);
+    let sum = 0;
+    for (let i = 0; i < wrapped.payload.length; i++) {
+      sum += wrapped.payload.charCodeAt(i);
+    }
+    const computedCheck = (~sum) & 0xFF;
+
+    if (computedCheck !== wrapped.checksum) {
+      console.warn("セーブデータ破損: チェックサム不一致。新規開始します。");
+      return false;
+    }
+
+    const data = JSON.parse(wrapped.payload);
+    GAME.mapId = data.mapId;
+    player.x = data.playerX;
+    player.y = data.playerY;
+    player.dir = data.playerDir;
+    GAME.stepCount = data.stepCount;
+    GAME.items = data.items;
+    
+    GAME.party = data.party.map(b => decodeMon44(new Uint8Array(b)));
+    GAME.box = data.box.map(b => new Uint8Array(b));
+    GAME.activeIndex = 0;
+    console.log("ロード成功: レポートから再開します。");
+    return true;
+  } catch(e) {
+    console.error("ロード失敗:", e);
+    return false;
+  }
 }
 
 /* ---------------------------------------------------------------------
-   5. グローバルゲーム状態
+   メッセージキュー機構
 --------------------------------------------------------------------- */
-const player = { x:4, y:6, dir:'down', moveCooldown:0 };
+function msg(text) { return { type: 'msg', text }; }
+function action(fn) { return { type: 'action', fn }; }
 
-// 0=道(歩行可) 1=草むら(エンカウント) 2=木(進入不可)
-const MAP = [
-  2,2,2,2,2,2,2,2,2,2,
-  2,0,0,0,1,1,1,0,0,2,
-  2,0,1,1,1,1,1,1,0,2,
-  2,0,1,1,0,0,1,1,0,2,
-  2,0,1,1,0,0,1,1,0,2,
-  2,0,1,1,1,1,1,1,0,2,
-  2,0,0,0,1,1,1,0,0,2,
-  2,0,0,0,0,0,0,0,0,2,
-  2,2,2,2,2,2,2,2,2,2,
-];
-function tileAt(x,y){
-  if (x<0||y<0||x>=COLS||y>=ROWS) return 2;
-  return MAP[y*COLS+x];
+function startQueue(steps) {
+  stepQueue = steps;
+  advanceQueue();
 }
 
-const GAME = {
-  scene: 'field', // 'field' | 'battle' | 'status'
-  party: [ makeMon(0x02, 5, 1), makeMon(0x03, 5, 6) ],
-  box: [ storeToBox(makeMon(0x06, 5, 2)) ],
-  activeIndex: 0,
-  items: { 'きずぐすり': 3 },
-  stepCount: 0,
-  currentMessage: null,
-  stepQueue: [],
-  battle: null,
-  statusCursor: 0,
-};
-
-function activeMon(){ return GAME.party[GAME.activeIndex]; }
-
-/* ---------------------------------------------------------------------
-   6. ステップキュー（メッセージ送り・行動の逐次処理）
---------------------------------------------------------------------- */
-function msg(text){ return { type:'msg', text }; }
-function action(fn){ return { type:'action', fn }; }
-function pushStepsFront(steps){
-  for (let i = steps.length - 1; i >= 0; i--) GAME.stepQueue.unshift(steps[i]);
-}
-function startQueue(steps){
-  GAME.stepQueue = steps.slice();
-  processNextStep();
-}
-function processNextStep(){
-  if (GAME.stepQueue.length === 0){
+function advanceQueue() {
+  if (stepQueue.length === 0) {
     GAME.currentMessage = null;
     if (typeof onQueueEmpty === 'function') onQueueEmpty();
     render();
     return;
   }
-  const step = GAME.stepQueue.shift();
-  if (step.type === 'msg'){
-    GAME.currentMessage = step.text;
+  const next = stepQueue.shift();
+  if (next.type === 'msg') {
+    GAME.currentMessage = next.text;
     render();
-  } else {
-    step.fn();
-    processNextStep();
-  }
-}
-function ackMessage(){
-  if (GAME.currentMessage !== null){
-    GAME.currentMessage = null;
-    processNextStep();
+  } else if (next.type === 'action') {
+    next.fn();
+    advanceQueue();
   }
 }
 
+function pushStepsFront(steps) {
+  stepQueue = [...steps, ...stepQueue];
+}
+
 /* ---------------------------------------------------------------------
-   7. 入力ハンドラ（各シーンのロジックへディスパッチ）
+   オブジェクト対話システム
 --------------------------------------------------------------------- */
-function pressA(){
-  if (GAME.currentMessage !== null){ ackMessage(); return; }
-  if (GAME.scene === 'status'){
-    if (GAME.statusCursor === 0 && GAME.party[1] && GAME.box[0]){
-      const fromParty = GAME.party[1];
-      const fromBox = GAME.box[0];
-      GAME.box[0] = storeToBox(fromParty);
-      GAME.party[1] = withdrawFromBox(fromBox);
+function interactWithObject() {
+  let nx = player.x;
+  let ny = player.y;
+  if (player.dir === 'left') nx--;
+  else if (player.dir === 'right') nx++;
+  else if (player.dir === 'up') ny--;
+  else if (player.dir === 'down') ny++;
+
+  const currentMap = MAPS[GAME.mapId];
+  const obj = currentMap.objects.find(o => o.x === nx && o.y === ny);
+  if (obj) {
+    const steps = [msg(obj.text)];
+    // もしジョーイさん（回復施設）なら全回復アクションを挟む
+    if (obj.isHealer) {
+      steps.push(msg("おあずかり した ポケモン を かいふく させました！"));
+      steps.push(action(() => {
+        GAME.party.forEach(m => {
+          m.curHP = m.maxHP;
+          m.status = null;
+          m.toxicCounter = 0;
+          m.leechSeeded = false;
+        });
+      }));
     }
-    render();
+    startQueue(steps);
+    return true;
+  }
+  return false;
+}
+
+/* ---------------------------------------------------------------------
+   入力ハンドラー & シーン委譲
+--------------------------------------------------------------------- */
+function pressA() {
+  if (GAME.currentMessage !== null) {
+    advanceQueue();
     return;
   }
-  // 戦闘中のAボタン処理は game-battle.js 側の関数が定義されていれば委譲
+  if (GAME.scene === 'field') {
+    // 目の前にオブジェクトがあれば会話開始
+    if (interactWithObject()) return;
+  }
   if (GAME.scene === 'battle' && typeof pressABattle === 'function') {
     pressABattle();
+  } else if (GAME.scene === 'status') {
+    if (GAME.statusCursor === 0) {
+      // 既存のパーティ⇔ボックス交換
+      if (GAME.party.length >= 2 && GAME.box.length >= 1) {
+        const p2 = encodeMon44(GAME.party[1]);
+        const b1 = GAME.box[0];
+        GAME.party[1] = decodeMon44(b1);
+        GAME.box[0] = p2;
+      }
+    } else if (GAME.statusCursor === 1) {
+      // レポートを書く
+      saveGame();
+      startQueue([msg("レポート に しっかり かきつづった！")]);
+      GAME.scene = 'field';
+    }
+    render();
   }
 }
 
-function pressB(){
-  if (GAME.scene === 'status'){ GAME.scene = 'field'; render(); return; }
+function pressB() {
+  if (GAME.currentMessage !== null) return;
   if (GAME.scene === 'battle' && typeof pressBBattle === 'function') {
     pressBBattle();
+  } else if (GAME.scene === 'status') {
+    GAME.scene = 'field';
+    render();
   }
 }
 
-function pressStart(){
-  if (GAME.scene === 'field'){ GAME.scene = 'status'; GAME.statusCursor = 0; render(); }
-  else if (GAME.scene === 'status'){ GAME.scene = 'field'; render(); }
+function pressStart() {
+  if (GAME.currentMessage !== null) return;
+  if (GAME.scene === 'field') {
+    GAME.scene = 'status';
+    GAME.statusCursor = 0;
+    render();
+  }
 }
 
-function pressDir(dir){
-  if (GAME.scene === 'field' && typeof tryMovePlayer === 'function'){
-    const map = { up:[0,-1], down:[0,1], left:[-1,0], right:[1,0] };
-    const [dx,dy] = map[dir];
-    tryMovePlayer(dx,dy);
-    return;
-  }
-  if (GAME.scene === 'battle' && typeof pressDirBattle === 'function') {
+function pressDir(dir) {
+  if (GAME.currentMessage !== null) return;
+  if (GAME.scene === 'field' && typeof tryMovePlayer === 'function') {
+    if (dir === 'up') tryMovePlayer(0, -1);
+    else if (dir === 'down') tryMovePlayer(0, 1);
+    else if (dir === 'left') tryMovePlayer(-1, 0);
+    else if (dir === 'right') tryMovePlayer(1, 0);
+  } else if (GAME.scene === 'battle' && typeof pressDirBattle === 'function') {
     pressDirBattle(dir);
+  } else if (GAME.scene === 'status') {
+    if (dir === 'up' || dir === 'down') {
+      GAME.statusCursor = GAME.statusCursor === 0 ? 1 : 0;
+      render();
+    }
   }
 }
 
-/* ---------------------------------------------------------------------
-   8. 入力デバイスへのイベントバインド
---------------------------------------------------------------------- */
-function bindHold(el, onDown){
-  let interval = null;
-  const start = (e) => {
-    e.preventDefault();
-    el.classList.add('active');
-    onDown();
-    clearInterval(interval);
-    interval = setInterval(onDown, 140);
-  };
-  const end = (e) => { e && e.preventDefault(); el.classList.remove('active'); clearInterval(interval); };
-  el.addEventListener('touchstart', start, {passive:false});
-  el.addEventListener('touchend', end, {passive:false});
-  el.addEventListener('touchcancel', end, {passive:false});
-  el.addEventListener('mousedown', start);
-  window.addEventListener('mouseup', end);
-}
-function bindTap(el, onTap){
-  const fire = (e) => { e.preventDefault(); onTap(); };
-  el.addEventListener('touchstart', fire, {passive:false});
-  el.addEventListener('mousedown', fire);
-}
-
-bindHold(document.getElementById('d-up'), () => pressDir('up'));
-bindHold(document.getElementById('d-down'), () => pressDir('down'));
-bindHold(document.getElementById('d-left'), () => pressDir('left'));
-bindHold(document.getElementById('d-right'), () => pressDir('right'));
-bindTap(document.getElementById('btn-a'), pressA);
-bindTap(document.getElementById('btn-b'), pressB);
-bindTap(document.getElementById('btn-start'), pressStart);
-bindTap(document.getElementById('btn-select'), () => {});
-
-window.addEventListener('keydown', (e) => {
-  if (e.key === 'ArrowUp') pressDir('up');
-  else if (e.key === 'ArrowDown') pressDir('down');
-  else if (e.key === 'ArrowLeft') pressDir('left');
-  else if (e.key === 'ArrowRight') pressDir('right');
-  else if (e.key === 'z' || e.key === 'Z') pressA();
-  else if (e.key === 'x' || e.key === 'X') pressB();
-  else if (e.key === 'Enter') pressStart();
-});
-
-/* ---------------------------------------------------------------------
-   9. メインハブ描画関数 & ループ
---------------------------------------------------------------------- */
-function render(){
+function render() {
   if (GAME.scene === 'field' && typeof drawField === 'function') drawField();
   else if (GAME.scene === 'battle' && typeof drawBattle === 'function') drawBattle();
   else if (GAME.scene === 'status' && typeof drawStatus === 'function') drawStatus();
 }
 
-function loop(){
-  RNG.tickDiv();
-  if (player.moveCooldown > 0) player.moveCooldown--;
+/* ---------------------------------------------------------------------
+   初期化
+--------------------------------------------------------------------- */
+function initGame() {
+  if (!loadGame()) {
+    // セーブがない場合は新規初期化
+    GAME.party = [makeMon(0, 5), makeMon(4, 5)];
+    GAME.box = [encodeMon44(makeMon(2, 5)), encodeMon44(makeMon(6, 5))];
+    GAME.mapId = 0;
+    player.x = 4;
+    player.y = 4;
+  }
   render();
-  requestAnimationFrame(loop);
 }
 
-// 最初のフレーム駆動を開始（すべてのスクリプトが読み込まれた後に回り始めます）
-requestAnimationFrame(loop);
+window.addEventListener('load', initGame);

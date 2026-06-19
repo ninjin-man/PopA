@@ -21,7 +21,6 @@ function startBattle(wild) {
   ]);
 }
 
-// game-core.js のメッセージキューが空になった際に呼び出されるコールバック
 function onQueueEmpty() {
   if (GAME.scene === 'battle' && GAME.battle && GAME.battle.active) {
     GAME.battle.menuOpen = true;
@@ -29,43 +28,30 @@ function onQueueEmpty() {
   }
 }
 
-/* ---------------------------------------------------------------------
-   2. 初代リスペクトの計算ロジック（各種バグ・仕様の再現）
---------------------------------------------------------------------- */
-// 素早さ依存の急所率（種族のベース素早さ / 512）
-function critChance(baseSpd) { 
-  return Math.min(baseSpd / 512, 0.5); 
-}
-
+function critChance(baseSpd) { return Math.min(baseSpd / 512, 0.5); }
 function isCrit(attacker) {
   const threshold = Math.floor(critChance(attacker.species.base.spd) * 256);
   return rngByte() < threshold;
 }
 
-// 命中判定: accuracy=100 の技でもしきい値が255になるため、
-// 乱数が最大値255を引いた場合のみ「1/256ではずれる」仕様を再現
 function accuracyCheck(move) {
   const threshold = Math.floor(move.accuracy * 255 / 100);
   return rngByte() < threshold;
 }
 
-// ダメージ計算（実機準拠の計算順序と217〜255の乱数幅）
 function calcDamage(attacker, defender, move, crit) {
   const atkStat = move.category === 'physical' ? attacker.stat.atk : attacker.stat.spc;
   const defStat = move.category === 'physical' ? defender.stat.def : defender.stat.spc;
   
   let dmg = Math.floor(Math.floor(Math.floor((2 * attacker.level) / 5 + 2) * move.power * atkStat / defStat) / 50) + 2;
   if (crit) dmg *= 2;
-  if (attacker.species.type === move.type) dmg = Math.floor(dmg * 1.5); // タイプ一致
+  if (attacker.species.type === move.type) dmg = Math.floor(dmg * 1.5);
 
-  const randPart = 217 + rngRange(255 - 217 + 1); // 217-255のランダム幅
+  const randPart = 217 + rngRange(255 - 217 + 1);
   dmg = Math.max(1, Math.floor(dmg * (randPart / 255)));
   return dmg;
 }
 
-/* ---------------------------------------------------------------------
-   3. ターン解決 & 行動処理
---------------------------------------------------------------------- */
 function enemyChooseMove(mon) {
   const usable = mon.moves.filter(m => m.pp > 0);
   const pool = usable.length ? usable : mon.moves;
@@ -82,9 +68,7 @@ function executeTurn(playerMoveIdx) {
   battle.subMenu = null;
   battle.pendingPlayerMove = move;
 
-  // 素早さ比較による行動順決定
   const order = (mon.stat.spd >= battle.enemy.stat.spd) ? ['player', 'enemy'] : ['enemy', 'player'];
-  
   const steps = [];
   for (const who of order) {
     steps.push(action(() => resolveSingleMove(who)));
@@ -142,9 +126,6 @@ function applyStatusMoveSteps(attacker, defender, move) {
   return steps;
 }
 
-/* ---------------------------------------------------------------------
-   4. ターンエンド時の状態異常処理（重複バグの再現）
---------------------------------------------------------------------- */
 function endOfTurnStatusAction() {
   const battle = GAME.battle;
   if (!battle || !battle.active) return;
@@ -154,7 +135,6 @@ function endOfTurnStatusAction() {
     const mon = who === 'player' ? activeMon() : battle.enemy;
     if (!mon || mon.curHP <= 0) continue;
 
-    // もうどくのダメージ処理
     if (mon.status === 'badpoison') {
       const dmg = Math.max(1, Math.floor(mon.maxHP / 16) * mon.toxicCounter);
       mon.curHP = Math.max(0, mon.curHP - dmg);
@@ -163,9 +143,7 @@ function endOfTurnStatusAction() {
       mon.toxicCounter++;
     }
 
-    // やどりぎのタネの処理
     if (mon.leechSeeded && mon.curHP > 0) {
-      // 【バグ再現】もうどく状態の時、やどりぎの吸収量計算にも「もうどくカウンタ」を共通適用してしまう
       const sharedMultiplier = (mon.status === 'badpoison') ? Math.max(1, mon.toxicCounter - 1) : 1;
       let drain = Math.floor(mon.maxHP / 8) * sharedMultiplier;
       drain = Math.min(drain, mon.curHP);
@@ -177,18 +155,12 @@ function endOfTurnStatusAction() {
       }
       
       steps.push(msg(`${mon.species.name}は やどりぎに 養分を すいとられた！`));
-      if (sharedMultiplier > 1) {
-        steps.push(msg('（もうどくカウンタと共有され 吸収量が ふくれあがっている…！）'));
-      }
       steps.push(action(() => checkFaintAndQueue(mon, mon === battle.enemy)));
     }
   }
   pushStepsFront(steps);
 }
 
-/* ---------------------------------------------------------------------
-   5. 勝敗・逃走・道具・交代の処理
---------------------------------------------------------------------- */
 function checkFaintAndQueue(mon, isEnemy) {
   if (mon.curHP <= 0) {
     const steps = [ msg(`${mon.species.name}は たおれた！`) ];
@@ -259,9 +231,95 @@ function attemptFlee() {
   }
 }
 
+/* ---------------------------------------------------------------------
+   初代準拠・3段階捕獲アルゴリズムの実装
+--------------------------------------------------------------------- */
+function attemptCapture(ballName) {
+  const battle = GAME.battle;
+  if (!battle || !battle.active) return;
+  battle.menuOpen = false;
+  GAME.items[ballName]--;
+
+  const enemy = battle.enemy;
+  let ballLimit = 255;
+  if (ballName === 'スーパーボール') ballLimit = 200;
+  if (ballName === 'ハイパーボール') ballLimit = 150;
+
+  const steps = [ msg(`${ballName}を なげた！`) ];
+
+  // --- ステップ1: 状態異常チェック枠 ---
+  let statusBonus = 0;
+  if (enemy.status === 'badpoison') statusBonus = 12; // 初代実機仕様
+  
+  if (statusBonus > 0 && rngRange(ballLimit) < statusBonus) {
+    // 状態異常による即時捕獲成功
+    steps.push(action(() => executeCaptureSuccess(enemy)));
+    startQueue(steps);
+    return;
+  }
+
+  // --- ステップ2: 種族捕獲度チェック ---
+  const rolledByte1 = rngByte();
+  if (rolledByte1 > enemy.species.catchRate) {
+    steps.push(msg('だめだ！ ポケモンが ボールから でてしまう！'));
+    steps.push(action(() => { battle.menuOpen = true; }));
+    startQueue(steps);
+    return;
+  }
+
+  // --- ステップ3: HP判定値 F の算出（実機バグ：スーパーボールの逆転現象を再現） ---
+  let denominator = 1;
+  if (ballName === 'モンスターボール' || ballName === 'ハイパーボール') {
+    denominator = Math.max(1, Math.floor(enemy.curHP / 4));
+  } else if (ballName === 'スーパーボール') {
+    denominator = Math.max(1, Math.floor(enemy.curHP / 6));
+  }
+
+  let F = Math.floor((enemy.species.base.hp * 255) / denominator);
+  if (F > 255) F = 255;
+
+  const rolledByte2 = rngByte();
+  if (rolledByte2 <= F) {
+    steps.push(action(() => executeCaptureSuccess(enemy)));
+  } else {
+    steps.push(msg('ああっ！ あとすこしの ところだったのに！'));
+    steps.push(action(() => { battle.menuOpen = true; }));
+  }
+  startQueue(steps);
+}
+
+function executeCaptureSuccess(enemy) {
+  const battle = GAME.battle;
+  battle.active = false;
+  battle.resolved = true;
+
+  const steps = [ msg(`やったー！ ${enemy.species.name}を つかまえたぞ！`) ];
+  
+  // パーティ上限2匹のチェック
+  if (GAME.party.length < 2) {
+    GAME.party.push(enemy);
+    steps.push(msg(`${enemy.species.name}は てもち に くわわった！`));
+  } else {
+    // ボックスへ44バイト形式でシリアライズ退避
+    GAME.box.push(encodeMon44(enemy));
+    steps.push(msg('てもち が いっぱいなので パソコンに てんそう された！'));
+  }
+  
+  steps.push(action(returnToField));
+  pushStepsFront(steps);
+}
+
 function useItem(name) {
   const battle = GAME.battle;
-  if (name === 'きずぐすり' && GAME.items['きずぐすり'] > 0) {
+  if (GAME.items[name] <= 0) return;
+
+  if (name.endsWith('ボール')) {
+    battle.subMenu = null;
+    attemptCapture(name);
+    return;
+  }
+
+  if (name === 'きずぐすり') {
     const mon = activeMon();
     const heal = 20;
     const before = mon.curHP;
@@ -295,7 +353,7 @@ function returnToField() {
 }
 
 /* ---------------------------------------------------------------------
-   6. バトル画面の描画処理
+   バトルUI描画
 --------------------------------------------------------------------- */
 function drawHPBar(x, y, w, ratio) {
   ctx.fillStyle = PAL[0];
@@ -314,7 +372,6 @@ function drawBattle() {
   const enemy = battle.enemy;
   const pm = activeMon();
 
-  // 敵モンスター情報
   ctx.font = '26px serif';
   ctx.fillStyle = PAL[0];
   ctx.fillText(TYPE_EMOJI[enemy.species.type] || '❓', 96, 44);
@@ -323,7 +380,6 @@ function drawBattle() {
   drawHPBar(86, 20, 64, Math.max(0, enemy.curHP) / enemy.maxHP);
   if (enemy.status === 'badpoison') ctx.fillText('もうどく', 86, 32);
 
-  // 味方モンスター情報
   ctx.font = '26px serif';
   ctx.fillText(TYPE_EMOJI[pm.species.type] || '❓', 16, 100);
   ctx.font = '7px monospace';
@@ -332,7 +388,6 @@ function drawBattle() {
   ctx.fillText(`${Math.max(0, pm.curHP)}/${pm.maxHP}`, 6, 124);
   if (pm.status === 'badpoison') ctx.fillText('もうどく', 70, 110);
 
-  // 外枠メッセージウィンドウ
   ctx.strokeStyle = PAL[0];
   ctx.lineWidth = 1;
   ctx.strokeRect(2, 126, 156, 16);
@@ -353,7 +408,7 @@ function drawBattle() {
     pm.moves.forEach((m, i) => {
       const cx = 6 + (i % 2) * 82;
       const cy = 132 + Math.floor(i / 2) * 9;
-      ctx.fillText((battle.subCursor === i ? '▶' : '　') + `${m.name} ${m.pp}/${m.maxPp}`, cx, cy);
+      ctx.fillText((battle.subCursor === i ? '▶' : '　') + `${m.name} ${m.pp}`, cx, cy);
     });
   } else if (battle.subMenu === 'party') {
     GAME.party.forEach((m, i) => {
@@ -364,15 +419,13 @@ function drawBattle() {
   } else if (battle.subMenu === 'item') {
     const names = Object.keys(GAME.items);
     names.forEach((n, i) => {
-      const cy = 132 + i * 9;
-      ctx.fillText((battle.subCursor === i ? '▶' : '　') + `${n} x${GAME.items[n]}`, 6, cy);
+      const cx = 4 + (i % 2) * 78;
+      const cy = 132 + Math.floor(i / 2) * 9;
+      ctx.fillText((battle.subCursor === i ? '▶' : '　') + `${n.slice(0,4)}:${GAME.items[n]}`, cx, cy);
     });
   }
 }
 
-/* ---------------------------------------------------------------------
-   7. コアから委譲される戦闘用入力ハンドラ
---------------------------------------------------------------------- */
 function pressABattle() {
   if (!GAME.battle) return;
   const battle = GAME.battle;
@@ -429,8 +482,8 @@ function pressDirBattle(dir) {
     render();
   } else if (battle.subMenu === 'item') {
     const n = Object.keys(GAME.items).length;
-    if (dir === 'up') battle.subCursor = (battle.subCursor - 1 + n) % n;
-    if (dir === 'down') battle.subCursor = (battle.subCursor + 1) % n;
+    if (dir === 'left' || dir === 'right') battle.subCursor = battle.subCursor % 2 === 0 ? battle.subCursor + 1 : battle.subCursor - 1;
+    if (dir === 'up' || dir === 'down') battle.subCursor = (battle.subCursor + 2) % n;
     render();
   }
 }
