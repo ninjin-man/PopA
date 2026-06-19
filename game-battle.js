@@ -355,74 +355,187 @@ function returnToField() {
 /* ---------------------------------------------------------------------
    バトルUI描画
 --------------------------------------------------------------------- */
-function drawHPBar(x, y, w, ratio) {
+function drawHPBar(x, y, w, ratio, h = 6) {
   ctx.fillStyle = PAL[0];
-  ctx.fillRect(x, y, w, 5);
+  ctx.fillRect(x, y, w, h);
   ctx.fillStyle = PAL[3];
-  ctx.fillRect(x + 1, y + 1, w - 2, 3);
+  ctx.fillRect(x + 1, y + 1, w - 2, h - 2);
   ctx.fillStyle = ratio > 0.5 ? PAL[1] : PAL[0];
-  ctx.fillRect(x + 1, y + 1, Math.max(0, Math.floor((w - 2) * ratio)), 3);
+  ctx.fillRect(x + 1, y + 1, Math.max(0, Math.floor((w - 2) * ratio)), h - 2);
+}
+
+// 角丸風の情報ボックス（枠線+背景）を描き、中身は渡された関数で描画する
+function drawInfoBox(x, y, w, h, drawContent) {
+  ctx.fillStyle = PAL[3];
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = PAL[0];
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x, y, w, h);
+  drawContent();
+}
+
+// メッセージを描画幅に収まるよう実測しながら折り返す
+function wrapMessage(text, maxWidth) {
+  const lines = [];
+  let cur = '';
+  for (const ch of text) {
+    const test = cur + ch;
+    if (cur.length > 0 && ctx.measureText(test).width > maxWidth) {
+      lines.push(cur);
+      cur = ch;
+    } else {
+      cur = test;
+    }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+// 2列グリッドのコマンド選択（選択中はハイライト反転表示）
+function drawSelectGrid(x, y, w, h, labels, selectedIdx) {
+  const cols = labels.length > 1 ? 2 : 1;
+  const rows = Math.ceil(labels.length / cols);
+  const cellW = w / cols;
+  const cellH = h / rows;
+
+  ctx.strokeStyle = PAL[0];
+  ctx.lineWidth = 1;
+  if (cols > 1) {
+    ctx.beginPath();
+    ctx.moveTo(x + cellW, y + 2);
+    ctx.lineTo(x + cellW, y + h - 2);
+    ctx.stroke();
+  }
+  for (let r = 1; r < rows; r++) {
+    ctx.beginPath();
+    ctx.moveTo(x + 2, y + r * cellH);
+    ctx.lineTo(x + w - 2, y + r * cellH);
+    ctx.stroke();
+  }
+
+  labels.forEach((label, i) => {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const cx = x + col * cellW;
+    const cy = y + row * cellH;
+    const selected = i === selectedIdx;
+
+    if (selected) {
+      ctx.fillStyle = PAL[0];
+      ctx.fillRect(cx + 1, cy + 1, cellW - 2, cellH - 2);
+      ctx.fillStyle = PAL[3];
+    } else {
+      ctx.fillStyle = PAL[0];
+    }
+    ctx.font = '8px monospace';
+    ctx.fillText(label, cx + 6, cy + cellH / 2 + 3);
+  });
+}
+
+// 縦1列リスト（パーティ選択など）。選択中はハイライト反転表示
+function drawSelectList(x, y, w, rowH, labels, selectedIdx) {
+  labels.forEach((label, i) => {
+    const ry = y + i * rowH;
+    const selected = i === selectedIdx;
+    if (selected) {
+      ctx.fillStyle = PAL[0];
+      ctx.fillRect(x, ry, w, rowH - 1);
+      ctx.fillStyle = PAL[3];
+    } else {
+      ctx.fillStyle = PAL[0];
+    }
+    ctx.font = '7px monospace';
+    ctx.fillText(label, x + 4, ry + rowH - 4);
+  });
 }
 
 function drawBattle() {
-  ctx.fillStyle = PAL[3];
-  ctx.fillRect(0, 0, 160, 144);
   const battle = GAME.battle;
   if (!battle) return;
   const enemy = battle.enemy;
   const pm = activeMon();
 
-  ctx.font = '26px serif';
+  // --- 背景（空） ---
+  ctx.fillStyle = PAL[2];
+  ctx.fillRect(0, 0, 160, 102);
+
+  // --- 足場 ---
+  ctx.fillStyle = PAL[1];
+  ctx.beginPath();
+  ctx.ellipse(126, 56, 26, 7, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(36, 90, 30, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // --- 敵/自分スプライト ---
+  ctx.font = '24px serif';
   ctx.fillStyle = PAL[0];
-  ctx.fillText(TYPE_EMOJI[enemy.species.type] || '❓', 96, 44);
-  ctx.font = '7px monospace';
-  ctx.fillText(`${enemy.species.name} Lv${enemy.level}`, 86, 16);
-  drawHPBar(86, 20, 64, Math.max(0, enemy.curHP) / enemy.maxHP);
-  if (enemy.status === 'badpoison') ctx.fillText('もうどく', 86, 32);
+  ctx.fillText(TYPE_EMOJI[enemy.species.type] || '❓', 112, 64);
+  ctx.fillText(TYPE_EMOJI[pm.species.type] || '❓', 22, 98);
 
-  ctx.font = '26px serif';
-  ctx.fillText(TYPE_EMOJI[pm.species.type] || '❓', 16, 100);
-  ctx.font = '7px monospace';
-  ctx.fillText(`${pm.species.name} Lv${pm.level}`, 6, 110);
-  drawHPBar(6, 114, 64, Math.max(0, pm.curHP) / pm.maxHP);
-  ctx.fillText(`${Math.max(0, pm.curHP)}/${pm.maxHP}`, 6, 124);
-  if (pm.status === 'badpoison') ctx.fillText('もうどく', 70, 110);
+  // --- 敵情報ボックス（左上） ---
+  drawInfoBox(4, 6, 84, 34, () => {
+    ctx.font = '7px monospace';
+    ctx.fillStyle = PAL[0];
+    ctx.fillText(`${enemy.species.name} Lv${enemy.level}`, 8, 16);
+    drawHPBar(8, 20, 64, Math.max(0, enemy.curHP) / enemy.maxHP);
+    if (enemy.status === 'badpoison') {
+      ctx.font = '6px monospace';
+      ctx.fillText('もうどく', 8, 33);
+    }
+  });
 
+  // --- 自分情報ボックス（右下寄り） ---
+  drawInfoBox(68, 58, 88, 40, () => {
+    ctx.font = '7px monospace';
+    ctx.fillStyle = PAL[0];
+    ctx.fillText(`${pm.species.name} Lv${pm.level}`, 72, 68);
+    drawHPBar(72, 72, 70, Math.max(0, pm.curHP) / pm.maxHP);
+    ctx.fillText(`${Math.max(0, pm.curHP)}/${pm.maxHP}`, 72, 86);
+    if (pm.status === 'badpoison') {
+      ctx.font = '6px monospace';
+      ctx.fillText('もうどく', 72, 94);
+    }
+  });
+
+  // --- メッセージ／コマンドボックス（下部） ---
+  const boxX = 2, boxY = 104, boxW = 156, boxH = 38;
+  ctx.fillStyle = PAL[3];
+  ctx.fillRect(boxX, boxY, boxW, boxH);
   ctx.strokeStyle = PAL[0];
   ctx.lineWidth = 1;
-  ctx.strokeRect(2, 126, 156, 16);
+  ctx.strokeRect(boxX, boxY, boxW, boxH);
   ctx.fillStyle = PAL[0];
-  ctx.font = '8px monospace';
 
   if (GAME.currentMessage !== null) {
-    ctx.fillText(GAME.currentMessage.slice(0, 34), 6, 136);
-    ctx.fillText('▶ Aで すすむ', 6, 142);
-  } else if (battle.menuOpen) {
-    const opts = ['たたかう', 'どうぐ', 'ポケモン', 'にげる'];
-    for (let i = 0; i < 4; i++) {
-      const cx = 8 + (i % 2) * 78;
-      const cy = 132 + Math.floor(i / 2) * 9;
-      ctx.fillText((battle.cursor === i ? '▶' : '　') + opts[i], cx, cy);
+    ctx.font = '8px monospace';
+    const lines = wrapMessage(GAME.currentMessage, boxW - 18).slice(0, 2);
+    lines.forEach((line, i) => {
+      ctx.fillStyle = PAL[0];
+      ctx.fillText(line, boxX + 6, boxY + 14 + i * 12);
+    });
+    ctx.font = '7px monospace';
+    if (lines.length <= 1) {
+      ctx.fillText('▶ Aで すすむ', boxX + 6, boxY + 30);
+    } else {
+      ctx.fillText('▶', boxX + boxW - 12, boxY + boxH - 6);
     }
+  } else if (battle.menuOpen) {
+    drawSelectGrid(boxX, boxY, boxW, boxH, ['たたかう', 'どうぐ', 'ポケモン', 'にげる'], battle.cursor);
   } else if (battle.subMenu === 'fight') {
-    pm.moves.forEach((m, i) => {
-      const cx = 6 + (i % 2) * 82;
-      const cy = 132 + Math.floor(i / 2) * 9;
-      ctx.fillText((battle.subCursor === i ? '▶' : '　') + `${m.name} ${m.pp}`, cx, cy);
-    });
-  } else if (battle.subMenu === 'party') {
-    GAME.party.forEach((m, i) => {
-      const cy = 132 + i * 7;
-      const tag = m.curHP <= 0 ? '(ひんし)' : `HP${m.curHP}/${m.maxHP}`;
-      ctx.fillText((battle.subCursor === i ? '▶' : '　') + `${m.species.name} Lv${m.level} ${tag}`, 6, cy);
-    });
+    const labels = pm.moves.map(m => `${m.name} ${m.pp}`);
+    drawSelectGrid(boxX, boxY, boxW, boxH, labels, battle.subCursor);
   } else if (battle.subMenu === 'item') {
     const names = Object.keys(GAME.items);
-    names.forEach((n, i) => {
-      const cx = 4 + (i % 2) * 78;
-      const cy = 132 + Math.floor(i / 2) * 9;
-      ctx.fillText((battle.subCursor === i ? '▶' : '　') + `${n.slice(0,4)}:${GAME.items[n]}`, cx, cy);
+    const labels = names.map(n => `${n.slice(0, 4)}:${GAME.items[n]}`);
+    drawSelectGrid(boxX, boxY, boxW, boxH, labels, battle.subCursor);
+  } else if (battle.subMenu === 'party') {
+    const labels = GAME.party.map(m => {
+      const tag = m.curHP <= 0 ? '(ひんし)' : `HP${m.curHP}/${m.maxHP}`;
+      return `${m.species.name} Lv${m.level} ${tag}`;
     });
+    drawSelectList(boxX + 4, boxY + 4, boxW - 8, boxH / GAME.party.length, labels, battle.subCursor);
   }
 }
 

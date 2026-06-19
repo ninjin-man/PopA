@@ -78,7 +78,80 @@ function triggerEncounter() {
 }
 
 /* ---------------------------------------------------------------------
-   3. カメラスクロール対応フィールド画面の描画
+   3. キャラクター／オブジェクトのスプライト描画
+--------------------------------------------------------------------- */
+// プレイヤー：帽子をかぶったチビキャラ（向きでツバと目の位置が変わる）
+function drawPlayerSprite(px, py, dir) {
+  const cx = px + TILE / 2;
+
+  // 影
+  ctx.fillStyle = PAL[1];
+  ctx.beginPath();
+  ctx.ellipse(cx, py + TILE - 2, 5, 1.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 体
+  ctx.fillStyle = PAL[0];
+  ctx.fillRect(cx - 4, py + 8, 8, 6);
+
+  // 頭
+  ctx.beginPath();
+  ctx.arc(cx, py + 6, 4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 帽子のツバ（向いている方向に張り出す）
+  ctx.fillStyle = PAL[1];
+  if (dir === 'down') ctx.fillRect(cx - 4, py + 4, 8, 2);
+  else if (dir === 'up') ctx.fillRect(cx - 3, py + 1, 6, 2);
+  else if (dir === 'left') ctx.fillRect(cx - 6, py + 4, 6, 2);
+  else ctx.fillRect(cx, py + 4, 6, 2);
+
+  // 目（後ろ向きの時は見えない）
+  if (dir !== 'up') {
+    ctx.fillStyle = PAL[3];
+    if (dir === 'down') {
+      ctx.fillRect(cx - 2, py + 6, 1, 1);
+      ctx.fillRect(cx + 1, py + 6, 1, 1);
+    } else if (dir === 'left') {
+      ctx.fillRect(cx - 3, py + 6, 1, 1);
+    } else {
+      ctx.fillRect(cx + 2, py + 6, 1, 1);
+    }
+  }
+}
+
+// NPC：帽子なしのチビキャラ（プレイヤーと見分けがつくシルエット）
+function drawNpcSprite(ox, oy) {
+  const cx = ox + TILE / 2;
+
+  ctx.fillStyle = PAL[1];
+  ctx.beginPath();
+  ctx.ellipse(cx, oy + TILE - 2, 5, 1.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = PAL[0];
+  ctx.fillRect(cx - 4, oy + 8, 8, 6);
+  ctx.beginPath();
+  ctx.arc(cx, oy + 6, 4, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = PAL[3];
+  ctx.fillRect(cx - 2, oy + 6, 1, 1);
+  ctx.fillRect(cx + 1, oy + 6, 1, 1);
+}
+
+// 看板：支柱付きの木の立て札
+function drawSignSprite(ox, oy) {
+  ctx.fillStyle = PAL[0];
+  ctx.fillRect(ox + 7, oy + 8, 2, 6);
+  ctx.fillRect(ox + 2, oy + 2, TILE - 4, 7);
+  ctx.fillStyle = PAL[3];
+  ctx.fillRect(ox + 4, oy + 4, TILE - 8, 1);
+  ctx.fillRect(ox + 4, oy + 6, TILE - 8, 1);
+}
+
+/* ---------------------------------------------------------------------
+   4. カメラスクロール対応フィールド画面の描画
 --------------------------------------------------------------------- */
 function drawField() {
   const currentMap = MAPS[GAME.mapId];
@@ -98,23 +171,54 @@ function drawField() {
       const my = camY + y;
       
       const t = currentMap.tiles[my * currentMap.cols + mx];
-      
-      // 2:木/壁(最暗) / 1:草むら(暗) / 0:道(最明) / 4:ドア(最明)
-      ctx.fillStyle = t === 2 ? PAL[0] : (t === 1 ? PAL[1] : PAL[3]);
-      ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
-      
-      if (t === 1) { // 草
+      const px = x * TILE, py = y * TILE;
+
+      if (t === 2) {
+        // 木：暗い地面の上に丸い樹冠＋葉のハイライト（マス位置で固定パターン＝チラつかない）
         ctx.fillStyle = PAL[0];
-        ctx.fillRect(x * TILE + 3, y * TILE + 3, 2, 6);
-        ctx.fillRect(x * TILE + 9, y * TILE + 6, 2, 6);
-      }
-      if (t === 0) { // 道
+        ctx.fillRect(px, py, TILE, TILE);
+        ctx.fillStyle = PAL[1];
+        ctx.beginPath();
+        ctx.arc(px + 8, py + 8, 6, 0, Math.PI * 2);
+        ctx.fill();
+        const dots = [[5, 5], [10, 6], [6, 10], [10, 11]];
+        const d = dots[(mx * 7 + my * 13) % dots.length];
         ctx.fillStyle = PAL[2];
-        ctx.fillRect(x * TILE + 1, y * TILE + 1, 1, 1);
-      }
-      if (t === 4) { // 建物ドアの黒枠表現
+        ctx.fillRect(px + d[0], py + d[1], 2, 2);
+      } else if (t === 1) {
+        // 草むら：3パターンの草の生え方をマス位置で固定選択
+        ctx.fillStyle = PAL[1];
+        ctx.fillRect(px, py, TILE, TILE);
         ctx.fillStyle = PAL[0];
-        ctx.fillRect(x * TILE + 2, y * TILE + 4, TILE - 4, TILE - 4);
+        const variant = (mx + my) % 3;
+        if (variant === 0) {
+          ctx.fillRect(px + 3, py + 3, 2, 6);
+          ctx.fillRect(px + 9, py + 6, 2, 6);
+        } else if (variant === 1) {
+          ctx.fillRect(px + 2, py + 5, 2, 6);
+          ctx.fillRect(px + 8, py + 3, 2, 6);
+          ctx.fillRect(px + 12, py + 7, 2, 5);
+        } else {
+          ctx.fillRect(px + 4, py + 4, 2, 7);
+          ctx.fillRect(px + 10, py + 5, 2, 6);
+        }
+      } else if (t === 4) {
+        // ドア：壁の中に暗い入口とアクセント
+        ctx.fillStyle = PAL[1];
+        ctx.fillRect(px, py, TILE, TILE);
+        ctx.fillStyle = PAL[0];
+        ctx.fillRect(px + 3, py + 5, TILE - 6, TILE - 5);
+        ctx.fillStyle = PAL[2];
+        ctx.fillRect(px + 4, py + 7, 2, 2);
+      } else {
+        // 道：小石の点をマス位置で固定散らす
+        ctx.fillStyle = PAL[3];
+        ctx.fillRect(px, py, TILE, TILE);
+        const variant = (mx * 3 + my * 5) % 5;
+        ctx.fillStyle = PAL[2];
+        if (variant === 0) ctx.fillRect(px + 2, py + 2, 1, 1);
+        else if (variant === 2) ctx.fillRect(px + 11, py + 9, 1, 1);
+        else if (variant === 3) ctx.fillRect(px + 6, py + 12, 1, 1);
       }
     }
   }
@@ -124,42 +228,25 @@ function drawField() {
     if (obj.x >= camX && obj.x < camX + 10 && obj.y >= camY && obj.y < camY + 9) {
       const ox = (obj.x - camX) * TILE;
       const oy = (obj.y - camY) * TILE;
-      ctx.fillStyle = PAL[0];
-      
-      if (obj.type === 'npc') {
-        // NPCは丸
-        ctx.beginPath();
-        ctx.arc(ox + TILE/2, oy + TILE/2, TILE/2 - 2, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = PAL[3];
-        ctx.font = '6px monospace';
-        ctx.fillText("N", ox + 5, oy + 10);
-      } else {
-        // 看板は角丸四角風
-        ctx.fillRect(ox + 2, oy + 2, TILE - 4, TILE - 4);
-        ctx.fillStyle = PAL[3];
-        ctx.font = '6px monospace';
-        ctx.fillText("S", ox + 5, oy + 10);
-      }
+      if (obj.type === 'npc') drawNpcSprite(ox, oy);
+      else drawSignSprite(ox, oy);
     }
   });
 
   // プレイヤーの相対位置描画
   const px = (player.x - camX) * TILE;
   const py = (player.y - camY) * TILE;
-  ctx.fillStyle = PAL[0];
-  ctx.fillRect(px + 3, py + 2, TILE - 6, TILE - 4);
-  
-  ctx.fillStyle = PAL[3];
-  if (player.dir === 'up') ctx.fillRect(px + 6, py + 3, 4, 2);
-  else if (player.dir === 'down') ctx.fillRect(px + 6, py + TILE - 6, 4, 2);
-  else if (player.dir === 'left') ctx.fillRect(px + 3, py + 6, 2, 4);
-  else ctx.fillRect(px + TILE - 5, py + 6, 2, 4);
+  drawPlayerSprite(px, py, player.dir);
 
-  // マップ名・歩数のUI
+  // マップ名・歩数のUI（読みやすいよう背景ボックス付き）
+  ctx.fillStyle = PAL[3];
+  ctx.fillRect(0, 0, 110, 11);
+  ctx.strokeStyle = PAL[0];
+  ctx.lineWidth = 1;
+  ctx.strokeRect(0, 0, 110, 11);
   ctx.fillStyle = PAL[0];
   ctx.font = '7px monospace';
-  ctx.fillText(`${currentMap.name} (${GAME.stepCount}歩)`, 2, 10);
+  ctx.fillText(`${currentMap.name} (${GAME.stepCount}歩)`, 3, 9);
   
   if (GAME.currentMessage !== null) {
     drawMessageWindow();
@@ -167,15 +254,21 @@ function drawField() {
 }
 
 function drawMessageWindow() {
+  const boxX = 2, boxY = 98, boxW = 156, boxH = 44;
   ctx.fillStyle = PAL[3];
-  ctx.fillRect(2, 126, 156, 16);
+  ctx.fillRect(boxX, boxY, boxW, boxH);
   ctx.strokeStyle = PAL[0];
   ctx.lineWidth = 1;
-  ctx.strokeRect(2, 126, 156, 16);
-  
-  ctx.fillStyle = PAL[0];
+  ctx.strokeRect(boxX, boxY, boxW, boxH);
+
   ctx.font = '8px monospace';
-  ctx.fillText(GAME.currentMessage.slice(0, 34), 6, 136);
+  const lines = wrapMessage(GAME.currentMessage, boxW - 16).slice(0, 3);
+  lines.forEach((line, i) => {
+    ctx.fillStyle = PAL[0];
+    ctx.fillText(line, boxX + 6, boxY + 14 + i * 12);
+  });
+  ctx.font = '7px monospace';
+  ctx.fillText('▶', boxX + boxW - 12, boxY + boxH - 6);
 }
 
 /* ---------------------------------------------------------------------
