@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>MINI MON - Field & Battle Engine</title>
+<style>
+  :root {
+    --c0: #0f380f; /* 最も暗い */
+    --c1: #306230;
+    --c2: #8bac0f;
+    --c3: #9bbc0f; /* 最も明るい */
+    --shell: #3a3a3a;
+    --shell-dark: #222;
+  }
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--shell-dark);
+    font-family: "Courier New", monospace;
+    overscroll-behavior: none;
+    touch-action: none;
+  }
+  #app {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+    padding: 10px;
+    gap: 10px;
+  }
+  #screenWrap {
+    width: 100%;
+    max-width: 480px;
+    aspect-ratio: 160/144;
+    background: #1a1a1a;
+    border: 6px solid var(--shell);
+    border-radius: 8px;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #screen {
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    background: var(--c3);
+  }
+  #padWrap {
+    flex: 1;
+    width: 100%;
+    max-width: 480px;
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    grid-template-rows: 1fr auto;
+    padding: 10px;
+    gap: 20px;
+  }
+  /* 十字キー */
+  .dpad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    width: 150px;
+    height: 150px;
+    justify-self: center;
+    align-self: center;
+  }
+  .dp-btn {
+    background: #222;
+    border: 1px solid #111;
+  }
+  .dp-btn:active { background: #444; }
+  #d-up { grid-column: 2; grid-row: 1; border-radius: 4px 4px 0 0; }
+  #d-left { grid-column: 1; grid-row: 2; border-radius: 4px 0 0 4px; }
+  #d-center { grid-column: 2; grid-row: 2; background: #222; border: none; }
+  #d-right { grid-column: 3; grid-row: 2; border-radius: 0 4px 4px 0; }
+  #d-down { grid-column: 2; grid-row: 3; border-radius: 0 0 4px 4px; }
+
+  /* ABボタン */
+  .action-btns {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    align-self: center;
+    transform: rotate(-15deg);
+  }
+  .act-btn {
+    width: 55px;
+    height: 55px;
+    border-radius: 50%;
+    background: #a22;
+    border: 3px solid #711;
+    box-shadow: 0 4px #500;
+    color: #fff;
+    font-weight: bold;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .act-btn:active {
+    transform: translateY(4px);
+    box-shadow: 0 0 #500;
+  }
+
+  /* メニューボタン */
+  .meta-btns {
+    grid-column: 1 / span 2;
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    padding-top: 10px;
+  }
+  .meta-btn {
+    width: 70px;
+    height: 15px;
+    background: #777;
+    border-radius: 10px;
+    border: 2px solid #555;
+    transform: rotate(-15deg);
+    box-shadow: 0 2px #333;
+  }
+  .meta-btn:active {
+    transform: rotate(-15deg) translateY(2px);
+    box-shadow: 0 0 #333;
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="screenWrap">
+    <canvas id="screen" width="160" height="144"></canvas>
+  </div>
+
+  <div id="padWrap">
+    <div class="dpad">
+      <button class="dp-btn" id="d-up"></button>
+      <button class="dp-btn" id="d-left"></button>
+      <div id="d-center"></div>
+      <button class="dp-btn" id="d-right"></button>
+      <button class="dp-btn" id="d-down"></button>
+    </div>
+
+    <div class="action-btns">
+      <button class="act-btn" id="btn-b">B</button>
+      <button class="act-btn" id="btn-a">A</button>
+    </div>
+
+    <div class="meta-btns">
+      <button class="meta-btn" id="btn-select"></button>
+      <button class="meta-btn" id="btn-start"></button>
+    </div>
+  </div>
+</div>
+
+<script src="game-core.js"></script>
+<script src="game-map.js"></script>
+<script src="game-battle.js"></script>
+
+</body>
+</html>
