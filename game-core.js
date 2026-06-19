@@ -1,6 +1,10 @@
 "use strict";
 
-const CANVAS = document.getElementById("gameCanvas");
+// 修正①: index.html側のcanvas idは "screen" のため一致させる
+// (旧コードは "gameCanvas" を参照しており、CANVASがnullになって
+//  CANVAS.getContext("2d") が例外を投げ、スクリプト全体が初期化前に
+//  停止していた)
+const CANVAS = document.getElementById("screen");
 const ctx = CANVAS.getContext("2d");
 
 const TILE = 16;
@@ -439,6 +443,54 @@ function render() {
 }
 
 /* ---------------------------------------------------------------------
+   修正②: 画面上のボタン(十字キー/A/B/START)はHTMLに存在するだけで
+   どこにもイベントリスナーが繋がっておらず、操作不能だった。
+   タップ(pointerdown)とPC検証用キーボードの両方をここで接続する。
+--------------------------------------------------------------------- */
+function bindButton(id, handler) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    handler();
+  });
+}
+
+function bindInputs() {
+  bindButton('d-up', () => pressDir('up'));
+  bindButton('d-down', () => pressDir('down'));
+  bindButton('d-left', () => pressDir('left'));
+  bindButton('d-right', () => pressDir('right'));
+  bindButton('btn-a', pressA);
+  bindButton('btn-b', pressB);
+  bindButton('btn-start', pressStart);
+
+  // PC検証用: 矢印キー / Z=A / X=B / Enter=Start
+  window.addEventListener('keydown', (e) => {
+    switch (e.key) {
+      case 'ArrowUp': pressDir('up'); break;
+      case 'ArrowDown': pressDir('down'); break;
+      case 'ArrowLeft': pressDir('left'); break;
+      case 'ArrowRight': pressDir('right'); break;
+      case 'z': case 'Z': pressA(); break;
+      case 'x': case 'X': pressB(); break;
+      case 'Enter': pressStart(); break;
+    }
+  });
+}
+
+/* ---------------------------------------------------------------------
+   修正③: player.moveCooldown を毎フレーム減算する仕組みが
+   どこにも存在せず、最初の1歩を動いた直後にクールダウンが
+   9のまま固定され、以後ずっと移動不能になっていた。
+   requestAnimationFrameで毎フレーム1ずつ減らすループを追加。
+--------------------------------------------------------------------- */
+function gameLoop() {
+  if (player.moveCooldown > 0) player.moveCooldown--;
+  requestAnimationFrame(gameLoop);
+}
+
+/* ---------------------------------------------------------------------
    初期化
 --------------------------------------------------------------------- */
 function initGame() {
@@ -450,6 +502,8 @@ function initGame() {
     player.x = 4;
     player.y = 4;
   }
+  bindInputs();
+  requestAnimationFrame(gameLoop);
   render();
 }
 
