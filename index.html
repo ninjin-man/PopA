@@ -1,202 +1,121 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>UNKNOWN DUNGEON</title>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>未知の迷宮｜不思議のダンジョン試作</title>
 <style>
-:root{--ink:#e9e3ce;--muted:#9ca6a5;--gold:#ffd16c;--panel:#171d24;--edge:#4d5b62;--red:#ed6c63;--green:#8bd6a2}
-*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#0b1015;color:var(--ink);font-family:system-ui,-apple-system,"Hiragino Sans","Yu Gothic",sans-serif}
-body{background:radial-gradient(ellipse at top,#25313b 0,#10171e 48%,#080c11 100%);padding:12px}
-.game{max-width:1000px;margin:0 auto;display:grid;gap:10px}
-.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:5px 3px}
-.brand{font-weight:900;letter-spacing:.12em;font-size:clamp(17px,3vw,25px);color:#f3d58c;text-shadow:2px 2px #583f2b}
-.brand small{display:block;color:#8faaa9;font-size:10px;letter-spacing:.24em;font-weight:700;text-shadow:none}
-button{font:inherit;color:var(--ink);background:linear-gradient(#394853,#222e37);border:1px solid #65737b;border-bottom-width:3px;border-radius:7px;padding:10px 13px;cursor:pointer;touch-action:manipulation}
-button:active{transform:translateY(2px);border-bottom-width:1px;filter:brightness(1.2)}
-button:disabled{opacity:.4;cursor:default}
-.topbar button{font-size:12px;padding:8px 10px}
-.hud{display:grid;grid-template-columns:1.15fr 1fr 1fr 1fr;gap:7px}
-.hudbox{border:1px solid #394750;background:linear-gradient(180deg,#222d35,#151c22);border-radius:8px;padding:8px 10px;box-shadow:inset 0 1px #ffffff0b}
-.hudlabel{font-size:10px;color:#a8b7b8;letter-spacing:.12em;font-weight:800}
-.hudvalue{font-size:16px;font-weight:900;margin-top:3px}
-.bar{height:7px;background:#080c10;border:1px solid #445057;border-radius:3px;overflow:hidden;margin-top:5px}
-.bar>i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#a6383f,#f17c63);transition:width .2s}
-.stage{position:relative;border:2px solid #52616a;border-radius:10px;overflow:hidden;background:#0a1014;box-shadow:0 10px 30px #0009,inset 0 0 0 3px #0b1117}
-.stagehead{position:absolute;z-index:2;top:8px;left:9px;right:9px;display:flex;justify-content:space-between;align-items:start;pointer-events:none;text-shadow:1px 2px #000}
-.floorname{font-size:12px;font-weight:900;letter-spacing:.12em;background:#101820d9;border:1px solid #718087;padding:5px 8px;border-radius:5px}
-.objective{font-size:11px;text-align:right;background:#101820d9;border:1px solid #52616a;padding:5px 8px;border-radius:5px;max-width:58%}
-canvas{display:block;width:100%;height:auto;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:manipulation}
-.floatmsg{position:absolute;left:50%;top:45%;transform:translate(-50%,-50%);font-weight:1000;font-size:clamp(20px,5vw,35px);letter-spacing:.05em;color:#ffe79c;text-shadow:3px 3px #6e371e,-1px -1px #fff;opacity:0;pointer-events:none;white-space:nowrap}
-.floatmsg.show{animation:pop 1s ease-out}
-@keyframes pop{0%{opacity:0;transform:translate(-50%,-30%) scale(.7)}20%{opacity:1;transform:translate(-50%,-50%) scale(1.12)}65%{opacity:1}100%{opacity:0;transform:translate(-50%,-85%) scale(1)}}
-.below{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(230px,.75fr);gap:10px}
-.panel{background:linear-gradient(180deg,#1b242c,#121920);border:1px solid #3c4b54;border-radius:9px;padding:11px;min-width:0}
-.paneltitle{font-size:11px;color:#b5c5c3;letter-spacing:.15em;font-weight:900;margin-bottom:8px}
-.controlsrow{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.dpad{display:grid;grid-template-columns:repeat(3,47px);grid-template-rows:repeat(2,43px);gap:4px;flex-shrink:0}
-.dpad button{padding:0;font-size:20px;font-weight:900;border-radius:7px}
-.dpad .blank{visibility:hidden}
-.actionbuttons{display:grid;grid-template-columns:1fr 1fr;gap:6px;flex:1}
-.actionbuttons button{font-size:12px;font-weight:800;padding:10px 6px}
-.actionbuttons .primary{background:linear-gradient(#826238,#50391f);border-color:#c29a58;color:#fff0c2}
-.actionbuttons .danger{background:linear-gradient(#713f40,#3d262b);border-color:#a56566}
-.bag{display:flex;gap:7px;flex-wrap:wrap;min-height:45px}
-.slot{width:44px;height:44px;border:1px solid #53646c;background:#0d141a;border-radius:6px;display:grid;place-items:center;position:relative;font-size:23px;box-shadow:inset 0 0 8px #0008}
-.slot .count{position:absolute;right:3px;bottom:0;font-size:9px;color:#fff;background:#111b;padding:0 3px}
-.slot.empty{font-size:10px;color:#5d6a70;border-style:dashed}
-.itemtext{font-size:12px;color:#c6d0cb;margin-top:7px;min-height:18px}
-.log{height:70px;overflow:auto;font-size:11px;line-height:1.55;color:#aebdbb;display:flex;flex-direction:column-reverse;gap:2px}
-.log div:first-child{color:#f1d68e}
-.footerhint{color:#839493;font-size:10px;text-align:center;letter-spacing:.04em;padding:1px}
-.overlay{position:fixed;inset:0;z-index:10;background:#03070be8;display:none;place-items:center;padding:20px}
-.modal{width:min(420px,100%);border:2px solid #8b9a99;border-radius:12px;background:linear-gradient(#293741,#111920);padding:23px;text-align:center;box-shadow:0 20px 70px #000}
-.modal .sigil{font-size:42px}.modal h2{margin:6px 0 8px;color:#ffdc88;font-size:25px}.modal p{color:#c0cbc8;font-size:13px;line-height:1.7}.modal button{margin-top:12px;min-width:150px}
-@media(max-width:640px){body{padding:7px}.game{gap:7px}.hud{gap:4px}.hudbox{padding:6px}.hudlabel{font-size:9px}.hudvalue{font-size:14px}.below{grid-template-columns:1fr}.controlsrow{align-items:center}.dpad{grid-template-columns:repeat(3,43px);grid-template-rows:repeat(2,40px)}.panel{padding:9px}.stagehead{top:5px;left:5px;right:5px}.floorname,.objective{font-size:9px;padding:4px 5px}.log{height:52px}.bag{min-height:42px}}
-</style>
-</head>
-<body>
-<div class="game">
-  <header class="topbar"><div class="brand">UNKNOWN DUNGEON<small>FIELD TEST 01 · RELIC HUNT</small></div><button id="restart">↻ やり直す</button></header>
-  <section class="hud">
-    <div class="hudbox"><div class="hudlabel">LIFE / HP</div><div class="hudvalue" id="hptext">12 / 12</div><div class="bar"><i id="hpbar"></i></div></div>
-    <div class="hudbox"><div class="hudlabel">DEPTH</div><div class="hudvalue" id="depthtext">B1F</div></div>
-    <div class="hudbox"><div class="hudlabel">BAG / 5</div><div class="hudvalue" id="bagtext">0 / 5</div></div>
-    <div class="hudbox"><div class="hudlabel">BANKED GOLD</div><div class="hudvalue" id="goldtext">0 G</div></div>
-  </section>
-  <section class="stage">
-    <div class="stagehead"><div class="floorname" id="floorname">THE OLD RUINS · B1F</div><div class="objective" id="objective">宝を集めて、入口まで帰還せよ</div></div>
-    <canvas id="game" width="440" height="440" aria-label="ドット絵ダンジョン"></canvas>
-    <div class="floatmsg" id="floatmsg">TREASURE!</div>
-  </section>
-  <div class="below">
-    <section class="panel">
-      <div class="paneltitle">COMMAND / 操作</div>
-      <div class="controlsrow">
-        <div class="dpad">
-          <span class="blank"></span><button data-move="0,-1" aria-label="上">▲</button><span class="blank"></span>
-          <button data-move="-1,0" aria-label="左">◀</button><button data-move="0,1" aria-label="下">▼</button><button data-move="1,0" aria-label="右">▶</button>
-        </div>
-        <div class="actionbuttons">
-          <button id="potion">✚ 回復薬</button><button id="escape" class="danger">↩ 帰還</button>
-          <button id="descend" class="primary" style="grid-column:span 2">▼ 深層へ進む</button>
-        </div>
-      </div>
-      <div class="footerhint" style="margin-top:8px">キーボード：矢印キー / WASD　・　敵にぶつかると攻撃</div>
-    </section>
-    <section class="panel">
-      <div class="paneltitle">RELIC POUCH / 戦利品</div>
-      <div class="bag" id="bag"></div><div class="itemtext" id="bagvalue">戦利品を拾おう。持ち帰るまで未確保。</div>
-      <div class="paneltitle" style="margin-top:12px">FIELD LOG / 探索ログ</div><div class="log" id="log"></div>
-    </section>
-  </div>
-</div>
-<div class="overlay" id="overlay"><div class="modal"><div class="sigil" id="endicon">✦</div><h2 id="endtitle">帰還成功</h2><p id="endtext"></p><button id="continue">拠点から再出発</button></div></div>
+:root{--bg:#181b1c;--panel:#292d2e;--panel2:#363a3b;--line:#77796f;--cream:#f2eee1;--muted:#c1c0b4;--gold:#f1d47d;--red:#d96a5f}
+*{box-sizing:border-box}body{margin:0;padding:7px;background:#1b1d1e;color:var(--cream);font:14px/1.35 system-ui,-apple-system,"Hiragino Sans","Yu Gothic",sans-serif}main{max-width:1050px;margin:auto;display:grid;gap:6px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px;background:#2b2f30;border:1px solid var(--line);padding:6px 9px}.brand{font-size:17px;font-weight:900;letter-spacing:.06em}.brand small{display:block;color:#c7c4b7;font-size:10px;font-weight:500;letter-spacing:.03em}
+button{font:inherit;color:var(--cream);background:#414546;border:1px solid #898b80;border-bottom:3px solid #111313;border-radius:3px;padding:8px 9px;cursor:pointer;touch-action:manipulation}button:active{transform:translateY(1px);border-bottom-width:1px}button:disabled{opacity:.35;cursor:default}
+.hud{display:grid;grid-template-columns:1.3fr 1.3fr .65fr 1fr;gap:4px}.stat{background:#303435;border:1px solid #77796f;padding:5px 8px;min-width:0}.label{font-size:10px;color:#d0cdbf}.value{font-weight:900;font-size:16px}.bar{height:5px;background:#151717;margin-top:3px;border:1px solid #66685e}.bar i{display:block;height:100%;background:#d9675c}
+.mainrow{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:6px;align-items:start}.left{display:grid;gap:6px;min-width:0}.stage{position:relative;overflow:hidden;border:2px solid #77796f;background:#080909;box-shadow:inset 0 0 0 2px #292d2e}canvas{width:100%;height:auto;display:block;image-rendering:pixelated;touch-action:manipulation}.stagehead{position:absolute;z-index:1;top:5px;left:5px;right:5px;display:flex;justify-content:space-between;gap:4px;pointer-events:none;text-shadow:1px 2px #000}.pill{background:#191c1de8;border:1px solid #8c8d7f;padding:4px 6px;font-size:10px;font-weight:800}
+.panel{min-width:0;background:var(--panel);border:1px solid var(--line);padding:7px}.title{font-size:12px;font-weight:900;color:#f0dfa5;border-bottom:1px solid #575b57;padding-bottom:5px;margin-bottom:6px}.sidebar{display:grid;gap:6px}.controls{display:grid;grid-template-columns:repeat(3,42px);grid-template-rows:repeat(3,36px);gap:3px;justify-content:center}.controls button{padding:0;font-size:17px}.centerkey{font-size:10px!important;background:#58513b}.blank{visibility:hidden}.commandgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px}.commandgrid button{font-size:11px;padding:8px 4px}.goldbtn{background:#65572f;border-color:#c7b16d;color:#fff5ce}.danger{background:#613c39;border-color:#b27a70}.controlrow{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:center}.controlright{display:grid;gap:4px}.hint{font-size:10px;color:var(--muted);margin-top:5px;min-height:13px}
+.bag{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}.slot{position:relative;min-width:0;min-height:42px;background:#363a3a;border:1px solid #85867b;display:grid;grid-template-columns:29px minmax(0,1fr);align-items:center;gap:4px;text-align:left;padding:4px;cursor:pointer}.slot .ico{font-size:22px;line-height:1;text-align:center}.slot .nm{font-size:10px;color:#f1efe6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.slot .num{position:absolute;right:3px;top:1px;font-size:9px;color:var(--gold)}.slot.empty{border-style:dashed;color:#777a72;display:flex;justify-content:center;min-height:33px;background:#252828;font-size:10px}.slot.equipped{border-color:var(--gold);box-shadow:inset 0 0 0 1px var(--gold);background:#51492e}
+.log{height:88px;overflow:auto;display:flex;flex-direction:column-reverse;gap:3px;font-size:11px;color:#d0d0c5;background:#191c1c;border:1px solid #575b57;padding:5px}.log div:first-child{color:var(--gold)}.legend{font-size:10px;color:#c2c0b4;margin-top:5px}.modalwrap{position:fixed;inset:0;z-index:10;background:#000c;display:none;place-items:center;padding:12px}.modal{width:min(450px,100%);max-height:88vh;overflow:auto;background:#2b3030;border:2px solid #969688;padding:12px;box-shadow:0 12px 45px #000}.modal h2{margin:0 0 7px;font-size:18px;color:#f4e5ac}.modal p{margin:5px 0 10px;color:#d0d0c5;font-size:12px}.modalactions{display:grid;grid-template-columns:1fr 1fr;gap:5px}.modalactions button{font-size:12px}.itembig{display:flex;gap:10px;align-items:center;padding:8px;background:#1b1e1e;border:1px solid #62655b;margin:8px 0}.itembig .bigico{font-size:32px;width:42px;text-align:center}.itembig strong{display:block}.itembig small{display:block;color:#c2c3b8;font-size:11px;margin-top:3px}.fullitems{display:grid;gap:5px}.choice{display:flex;align-items:center;gap:8px;text-align:left;width:100%;background:#383c3c}.choice span:first-child{font-size:22px;width:30px;text-align:center}.choice small{display:block;color:#c2c2b7}.notice{color:#f0d37d;font-size:11px;margin-top:8px}
+@media(max-width:700px){body{padding:4px}main{gap:4px}.top{padding:5px 7px}.brand{font-size:14px}.hud{gap:3px}.stat{padding:4px}.value{font-size:13px}.label{font-size:9px}.mainrow{grid-template-columns:1fr}.sidebar{grid-template-columns:1fr}.bag{grid-template-columns:repeat(2,minmax(0,1fr))}.slot{min-height:39px}.controls{grid-template-columns:repeat(3,minmax(35px,1fr));grid-template-rows:repeat(3,34px)}.controlrow{grid-template-columns:1fr 1fr}.log{height:70px}.panel{padding:6px}}
+</style></head><body><main>
+<header class="top"><div class="brand">未知の迷宮<small>不思議のダンジョン型・探索試作</small></div><button id="restart">最初から</button></header>
+<section class="hud">
+<div class="stat"><div class="label">HP</div><div class="value" id="hptext">14 / 14</div><div class="bar"><i id="hpbar"></i></div></div>
+<div class="stat"><div class="label">満腹度</div><div class="value" id="foodtext">100%</div><div class="bar"><i id="foodbar" style="background:#d5b85f"></i></div></div>
+<div class="stat"><div class="label">階層</div><div class="value" id="depthtext">B1F</div></div>
+<div class="stat"><div class="label">確保資金</div><div class="value" id="goldtext">0 G</div></div>
+</section>
+<div class="mainrow"><div class="left">
+<section class="stage"><div class="stagehead"><span class="pill" id="floorlabel">古い遺跡 · B1F</span><span class="pill" id="task">探索中</span></div><canvas id="game" width="440" height="440"></canvas></section>
+<section class="panel"><div class="title">移動・行動</div><div class="controlrow"><div class="controls"><button data-move="-1,-1" aria-label="左上">↖</button><button data-move="0,-1" aria-label="上">▲</button><button data-move="1,-1" aria-label="右上">↗</button><button data-move="-1,0" aria-label="左">◀</button><button id="wait" class="centerkey" aria-label="足踏み">足踏み</button><button data-move="1,0" aria-label="右">▶</button><i class="blank"></i><button data-move="-1,1" aria-label="左下">↙</button><button data-move="0,1" aria-label="下">▼</button><button data-move="1,1" aria-label="右下">↘</button></div><div class="controlright"><button id="attack">A 攻撃</button><button id="turnto">Y 振り向く</button><button id="pickup" class="goldbtn">足元の道具</button><button id="escape" class="danger">帰還</button><button id="descend">階段を下りる</button><button id="mapbtn">全体マップ</button></div></div><div class="legend">移動は8方向。敵に向かって移動すると攻撃。アイテムは「足元の道具」で拾い、持ち物欄からコマンドを選びます。</div></section>
+<section class="panel"><div class="title">メッセージ履歴</div><div class="log" id="log"></div></section></div>
+<aside class="sidebar"><section class="panel"><div class="title">探索状況</div><div id="liveinfo" class="hint">ターン 0　装備と足元の道具を確認</div><div class="hint" id="groundinfo">足元：なし</div><div class="legend">ターン制：プレイヤーの行動後にモンスターも行動します。</div></section><section class="panel"><div class="title">持ち物（選択してコマンド）</div><div class="bag" id="bag"></div><div class="hint" id="baghint">0/8個。金枠は装備中。</div></section></aside></div>
+</main>
+<div class="modalwrap" id="modalwrap"><div class="modal" id="modal"></div></div>
+<div class="modalwrap" id="endwrap"><div class="modal"><h2 id="endtitle">探索終了</h2><p id="endtext"></p><button id="continue">拠点から再出発</button></div></div>
 <script>
 (()=>{
-const cv=document.getElementById('game'),ctx=cv.getContext('2d');ctx.imageSmoothingEnabled=false;
-const N=11,T=40,MAX=5;
-const items={
- herb:{name:'薬草',icon:'🌿',value:8,color:'#78b95c',rarity:0},
- potion:{name:'回復薬',icon:'🧪',value:18,color:'#4baac4',rarity:0},
- coin:{name:'古びた銅貨',icon:'🪙',value:12,color:'#d4a64c',rarity:0},
- ore:{name:'青晶石',icon:'💎',value:24,color:'#6bb9d4',rarity:1},
- charm:{name:'欠けた護符',icon:'🔹',value:30,color:'#8e91e4',rarity:1},
- relic:{name:'星読みの小片',icon:'✦',value:65,color:'#f2d275',rarity:2}
+const cv=document.getElementById('game'),c=cv.getContext('2d');const N=11,T=40,CAP=8;
+const itemDefs={
+ herb:{name:'正体不明の草',icon:'🌿',value:8,kind:'grass',unknown:true,desc:'見た目だけでは効果が分からない草。'},
+ scroll:{name:'正体不明の巻物',icon:'📜',value:15,kind:'scroll',unknown:true,desc:'文字がかすれて読めない巻物。'},
+ seed:{name:'大きな種',icon:'🟤',value:6,kind:'food',desc:'食べると満腹度が少し回復する。'},
+ potion:{name:'回復薬',icon:'🧪',value:18,kind:'heal',desc:'HPを6回復する。'},
+ stone:{name:'投げ石',icon:'🪨',value:5,kind:'throw',desc:'投げると正面の敵に3ダメージ。'},
+ sword:{name:'錆びた剣',icon:'🗡️',value:25,kind:'weapon',desc:'攻撃力が2上がる。装備して攻撃しよう。'},
+ shield:{name:'木の盾',icon:'🛡️',value:20,kind:'shield',desc:'受けるダメージを1減らす。'},
+ escape:{name:'帰還の巻物',icon:'🌀',value:22,kind:'escape',desc:'どこからでも迷宮を脱出できる。'},
+ poison:{name:'毒草',icon:'🍂',value:2,kind:'poison',desc:'食べるとHPが3減る。'}
 };
-let s;
-function init(keep={}){
-s={x:1,y:1,hp:12,maxHp:12,depth:1,turn:0,bag:[],gold:keep.gold||0,escapes:keep.escapes||0,found:keep.found||new Set(),secured:keep.secured||0,best:keep.best||1,seen:new Set(),tiles:[],enemies:[],loot:[],over:false,flash:0,hasPotion:true};
-build();say('迷宮へ侵入。足音が暗闇に響く……');render();
-}
-function build(){
-s.tiles=Array.from({length:N},(_,y)=>Array.from({length:N},(_,x)=>(x===0||y===0||x===N-1||y===N-1)?1:0));
-const walls=[[3,1],[3,2],[3,3],[3,4],[6,2],[7,2],[8,2],[6,3],[6,4],[2,6],[3,6],[4,6],[7,6],[7,7],[7,8],[4,8],[5,8]];
-walls.forEach(([x,y])=>s.tiles[y][x]=1);
-// carve some connectors so the map is navigable
-[[3,5],[5,6],[7,5],[6,8],[8,8]].forEach(([x,y])=>s.tiles[y][x]=0);
-s.tiles[1][1]=0;s.tiles[9][9]=0;
-s.x=1;s.y=1;s.enemies=[];s.loot=[];s.seen=new Set();
-const es=s.depth===1?[[5,3,'rat'],[8,5,'bat'],[5,9,'rat']]:[[5,3,'rat'],[8,5,'bat'],[5,9,'rat'],[9,7,'bat']];
-es.forEach(([x,y,type])=>{if(!s.tiles[y][x])s.enemies.push({x,y,hp:s.depth>=3?6:4,atk:s.depth>=3?3:2,type,alive:true})});
-const pool=s.depth===1?['herb','coin','ore','potion','charm']:s.depth<4?['herb','coin','ore','charm','potion','relic']:['charm','ore','relic','potion'];
-[[2,2],[5,1],[8,3],[2,8],[9,5],[5,7]].forEach(([x,y])=>{if(!s.tiles[y][x]&&!s.enemies.some(e=>e.x===x&&e.y===y))s.loot.push({x,y,id:pool[Math.floor(Math.random()*pool.length)]})});
-s.best=Math.max(s.best,s.depth);
-}
-function say(text){const el=document.getElementById('log'),d=document.createElement('div');d.textContent='› '+text;el.prepend(d);while(el.children.length>12)el.lastChild.remove()}
-function popup(text){const e=document.getElementById('floatmsg');e.textContent=text;e.classList.remove('show');void e.offsetWidth;e.classList.add('show')}
-function reveal(){for(let y=-3;y<=3;y++)for(let x=-3;x<=3;x++)if(Math.abs(x)+Math.abs(y)<=4&&s.x+x>=0&&s.y+y>=0&&s.x+x<N&&s.y+y<N)s.seen.add((s.x+x)+','+(s.y+y))}
+let s,uid=0;
+function fresh(keep={}){s={x:1,y:1,hp:14,maxHp:14,food:100,depth:1,turn:0,gold:keep.gold||0,escapes:keep.escapes||0,secured:keep.secured||0,found:keep.found||new Set(),best:keep.best||1,bag:[],weapon:null,shield:null,tiles:[],seen:new Set(),enemies:[],items:[],over:false,front:[0,1],groundPickup:null};makeFloor();say('迷宮に入った。足元の道具を拾い、正体を確かめよう。');render()}
+function makeFloor(){s.tiles=Array.from({length:N},(_,y)=>Array.from({length:N},(_,x)=>(!x||!y||x===N-1||y===N-1)?1:0));[[3,1],[3,2],[3,3],[3,4],[6,2],[7,2],[8,2],[6,3],[6,4],[2,6],[3,6],[4,6],[7,6],[7,7],[7,8],[4,8],[5,8]].forEach(([x,y])=>s.tiles[y][x]=1);[[3,5],[5,6],[7,5],[6,8],[8,8]].forEach(([x,y])=>s.tiles[y][x]=0);s.tiles[1][1]=0;s.tiles[9][9]=0;s.x=1;s.y=1;s.seen=new Set();s.enemies=[];s.items=[];
+const enemies=s.depth===1?[[5,3,'rat'],[8,5,'bat'],[5,9,'rat']]:[[5,3,'rat'],[8,5,'bat'],[5,9,'rat'],[9,7,'bat']];
+enemies.forEach(([x,y,type])=>{if(!s.tiles[y][x])s.enemies.push({x,y,type,hp:s.depth>=3?6:4,atk:s.depth>=3?3:2})});
+let pool=s.depth===1?['herb','scroll','seed','potion','stone','sword','shield']:['herb','scroll','seed','potion','stone','shield','escape','herb','poison'];
+[[2,2],[5,1],[8,3],[2,8],[9,5],[5,7]].forEach(([x,y],i)=>{if(!s.tiles[y][x]&&!s.enemies.some(e=>e.x===x&&e.y===y))s.items.push({x,y,id:pool[Math.floor(Math.random()*pool.length)],uid:++uid})});s.best=Math.max(s.best,s.depth)}
+function say(t){let el=document.getElementById('log'),d=document.createElement('div');d.textContent='› '+t;el.prepend(d);while(el.children.length>18)el.lastChild.remove()}
+function popModal(html){document.getElementById('modal').innerHTML=html;document.getElementById('modalwrap').style.display='grid'}
+function closeModal(){document.getElementById('modalwrap').style.display='none'}
+function end(title,text){document.getElementById('endtitle').textContent=title;document.getElementById('endtext').textContent=text;document.getElementById('endwrap').style.display='grid'}
+function reveal(){for(let dy=-3;dy<=3;dy++)for(let dx=-3;dx<=3;dx++)if(Math.abs(dx)+Math.abs(dy)<=4&&s.x+dx>=0&&s.y+dy>=0&&s.x+dx<N&&s.y+dy<N)s.seen.add((s.x+dx)+','+(s.y+dy))}
 function blocked(x,y){return x<0||y<0||x>=N||y>=N||s.tiles[y][x]===1}
-function move(dx,dy){
-if(s.over)return;let nx=s.x+dx,ny=s.y+dy;if(blocked(nx,ny)){say('壁に阻まれた。');return}
-let e=s.enemies.find(e=>e.x===nx&&e.y===ny);
-if(e){e.hp-=3;popup('SLASH!');say('攻撃！ 敵に3ダメージ');if(e.hp<=0){s.enemies=s.enemies.filter(q=>q!==e);say('敵を撃破！');if(Math.random()<.6){const id=['coin','herb','ore','charm'][Math.floor(Math.random()*4)];s.loot.push({x:e.x,y:e.y,id});say('敵が何かを落とした！')}}else{s.hp-=e.atk;say('反撃を受けた！ HP -'+e.atk)}}
-else{s.x=nx;s.y=ny;s.turn++;pickUp();if(s.x===1&&s.y===1&&s.bag.length){}}
-enemyTurn();reveal();if(s.hp<=0)fail();render();
-}
-function pickUp(){const i=s.loot.findIndex(l=>l.x===s.x&&l.y===s.y);if(i<0)return;const l=s.loot[i],it=items[l.id];if(s.bag.length>=MAX){say('ポーチがいっぱいだ。何かを諦める必要がある。');return}s.bag.push(l.id);s.loot.splice(i,1);s.found.add(l.id);popup(it.rarity===2?'RARE RELIC!':'FOUND!');say(it.name+'を発見！ 持ち帰り価値 '+it.value+'G');}
-function enemyTurn(){if(s.over)return;for(const e of s.enemies){let d=Math.abs(e.x-s.x)+Math.abs(e.y-s.y);if(d===1){s.hp-=e.atk;say((e.type==='bat'?'コウモリ':'迷宮ネズミ')+'の攻撃！ HP -'+e.atk);continue}if(d<=5){let moves=[[Math.sign(s.x-e.x),0],[0,Math.sign(s.y-e.y)]].filter(a=>a[0]||a[1]);for(const [dx,dy] of moves){let x=e.x+dx,y=e.y+dy;if(!blocked(x,y)&&!s.enemies.some(q=>q!==e&&q.x===x&&q.y===y)&&!(x===s.x&&y===s.y)){e.x=x;e.y=y;break}}}}}
-function potion(){if(s.over)return;let i=s.bag.findIndex(id=>items[id].rarity===0&&(id==='herb'||id==='potion'));let amount=5;if(i>=0){const id=s.bag.splice(i,1)[0];amount=items[id].name==='薬草'?4:8;say(items[id].name+'を使用。')}else if(s.hasPotion){s.hasPotion=false;say('持ち込み回復薬を使用。')}else{say('回復手段がない！');return}const old=s.hp;s.hp=Math.min(s.maxHp,s.hp+amount);popup('+'+(s.hp-old)+' HP');enemyTurn();if(s.hp<=0)fail();render()}
-function descend(){if(s.over)return;if(s.x!==9||s.y!==9){say('階段は右下の紫色の床にある。');return}s.depth++;build();popup('B'+s.depth+'F');say(s.depth+'層へ進んだ。空気が冷たくなる……');render()}
-function escape(){if(s.over)return;if(s.x!==1||s.y!==1){say('帰還口は左上。そこまで戻ろう。');popup('FIND THE EXIT');return}const val=s.bag.reduce((a,id)=>a+items[id].value,0);s.gold+=val;s.secured+=s.bag.length;s.escapes++;s.bag=[];s.over=true;say('帰還成功！ '+val+'Gを確保');showEnd('✦','帰還成功！','戦利品を無事に持ち帰った。\\n獲得 '+val+' G。今回の発見は記録に残った。');render()}
-function fail(){if(s.over)return;s.hp=0;s.bag=[];s.over=true;say('力尽きた……戦利品を失った。');showEnd('☠','力尽きた','今回の戦利品はすべて失われた。発見記録と、過去に持ち帰った資金は残る。');render()}
-function showEnd(icon,title,text){document.getElementById('endicon').textContent=icon;document.getElementById('endtitle').textContent=title;document.getElementById('endtext').textContent=text.replace(/\\n/g,' ');document.getElementById('overlay').style.display='grid'}
-function rect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x,y,w,h)}
-function tile(x,y){
-const px=x*T,py=y*T;let hash=(x*73+y*191+x*y*13)%17;
-if(!s.seen.has(x+','+y)){rect(px,py,T,T,'#080d12');rect(px+2,py+2,T-4,T-4,'#0a1016');return}
-if(s.tiles[y][x]){rect(px,py,T,T,'#26343b');rect(px+1,py+1,T-2,T-2,'#33434a');rect(px+2,py+2,T-4,3,'#4b5b5f');rect(px+2,py+7,T-4,2,'#1a272f');if(hash%3===0)rect(px+7,py+13,3,4,'#59666a');rect(px,py+T-3,T,3,'#111b22')}
-else{rect(px,py,T,T,'#4b4b3c');rect(px+1,py+1,T-2,T-2,hash%4===0?'#62614a':'#565744');rect(px+2,py+3,T-4,1,'#72715a');rect(px+3,py+11,3,2,'#454a3d');rect(px+20,py+25,5,2,'#484b3e');if(hash%5===0)rect(px+28,py+8,2,3,'#777257');rect(px,py+T-3,T,3,'#343b34')}
-}
-function drawHero(x,y){
-const px=x*T,py=y*T;
-rect(px+10,py+30,21,5,'#25221d');
-rect(px+14,py+25,5,7,'#6e3e2c');rect(px+23,py+25,5,7,'#6e3e2c');
-rect(px+12,py+15,18,13,'#3d7b65');rect(px+10,py+17,5,9,'#bd8d4c');rect(px+27,py+17,5,9,'#bd8d4c');
-rect(px+13,py+7,17,12,'#d6a36d');rect(px+11,py+4,21,7,'#573d2a');rect(px+13,py+1,15,5,'#795237');rect(px+14,py+10,3,3,'#2a2522');rect(px+24,py+10,3,3,'#2a2522');rect(px+18,py+15,7,2,'#f0d5a3');
-rect(px+30,py+15,3,14,'#c4c7bc');rect(px+29,py+13,5,4,'#e4d9b4');
-}
-function drawEnemy(e){
-const x=e.x*T,y=e.y*T;rect(x+10,y+30,21,4,'#25221c');
-if(e.type==='bat'){rect(x+4,y+13,12,9,'#59496e');rect(x+25,y+13,12,9,'#59496e');rect(x+11,y+10,18,16,'#77638c');rect(x+14,y+7,5,5,'#b5a0c8');rect(x+23,y+7,5,5,'#b5a0c8');rect(x+14,y+15,4,4,'#f2d879');rect(x+23,y+15,4,4,'#f2d879')}
-else{rect(x+9,y+14,23,14,'#786b56');rect(x+11,y+9,18,13,'#9c8b6c');rect(x+12,y+5,5,7,'#b4a182');rect(x+24,y+5,5,7,'#b4a182');rect(x+14,y+14,4,4,'#e96b57');rect(x+24,y+14,4,4,'#e96b57');rect(x+16,y+24,5,7,'#5a4b3e');rect(x+25,y+24,5,7,'#5a4b3e')}
-}
-function drawLoot(l){
-const x=l.x*T,y=l.y*T,it=items[l.id];rect(x+10,y+28,21,4,'#24231b');
-if(l.id==='coin'){rect(x+13,y+13,15,15,'#986b2f');rect(x+15,y+11,13,14,'#e7bd56');rect(x+19,y+14,5,8,'#f8e59b')}
-else if(l.id==='herb'){rect(x+18,y+18,4,13,'#5c9a4b');rect(x+9,y+14,13,7,'#82c96b');rect(x+20,y+10,12,7,'#9bdd73');rect(x+18,y+18,11,6,'#6eb45a')}
-else if(l.id==='potion'){rect(x+17,y+8,9,5,'#d7c5a0');rect(x+15,y+12,13,18,'#55b5d2');rect(x+17,y+16,9,9,'#8de6ed');rect(x+17,y+23,9,5,'#3285a6')}
-else if(l.id==='ore'){rect(x+12,y+18,16,13,'#387c9a');rect(x+15,y+10,13,15,'#7de0eb');rect(x+18,y+12,5,9,'#d6fbf5')}
-else if(l.id==='charm'){rect(x+14,y+10,13,20,'#595ba5');rect(x+17,y+8,8,20,'#b6a9f5');rect(x+18,y+13,6,10,'#e4ddff')}
-else{rect(x+12,y+13,17,17,'#947b40');rect(x+15,y+8,12,20,'#f4d77c');rect(x+19,y+13,4,10,'#fff2b1');rect(x+8,y+18,7,5,'#f6df91')}
-if(it.rarity>=1){ctx.strokeStyle=it.color;ctx.lineWidth=1;ctx.strokeRect(x+7,y+6,26,27)}
-}
-function render(){
-reveal();ctx.clearRect(0,0,cv.width,cv.height);
-for(let y=0;y<N;y++)for(let x=0;x<N;x++)tile(x,y);
-// torch-like local glow
-const g=ctx.createRadialGradient(s.x*T+20,s.y*T+20,18,s.x*T+20,s.y*T+20,190);g.addColorStop(0,'#ffd78510');g.addColorStop(1,'#00000082');ctx.fillStyle=g;ctx.fillRect(0,0,440,440);
-for(const l of s.loot)if(s.seen.has(l.x+','+l.y))drawLoot(l);
-for(const e of s.enemies)if(s.seen.has(e.x+','+e.y))drawEnemy(e);
-if(s.seen.has('1,1')){rect(1*T+10,1*T+10,20,20,'#8b633a');rect(1*T+13,1*T+13,14,14,'#d2aa63');rect(1*T+17,1*T+16,5,9,'#60472b')}
-if(s.seen.has('9,9')){rect(9*T+8,9*T+8,24,24,'#57467a');rect(9*T+12,9*T+12,16,16,'#a895d7');rect(9*T+16,9*T+16,8,8,'#d7c6ff')}
-drawHero(s.x,s.y);
-document.getElementById('hptext').textContent=s.hp+' / '+s.maxHp;document.getElementById('hpbar').style.width=(s.hp/s.maxHp*100)+'%';
-document.getElementById('depthtext').textContent='B'+s.depth+'F';document.getElementById('bagtext').textContent=s.bag.length+' / '+MAX;document.getElementById('goldtext').textContent=s.gold+' G';
-document.getElementById('floorname').textContent='THE OLD RUINS · B'+s.depth+'F';
-document.getElementById('objective').textContent=s.bag.length?'戦利品 '+s.bag.reduce((a,id)=>a+items[id].value,0)+'G相当 · 入口へ帰還':'宝を探せ · 深層ほど高価な品';
-const bag=document.getElementById('bag');bag.innerHTML='';
-for(let i=0;i<MAX;i++){const slot=document.createElement('div');slot.className='slot'+(i>=s.bag.length?' empty':'');if(i<s.bag.length){const it=items[s.bag[i]];slot.textContent=it.icon;slot.title=it.name;const count=document.createElement('span');count.className='count';count.textContent=it.value+'G';slot.appendChild(count)}else slot.textContent='—';bag.appendChild(slot)}
-document.getElementById('bagvalue').textContent=s.bag.length?'持ち帰り価値：'+s.bag.reduce((a,id)=>a+items[id].value,0)+' G ／ 脱出成功まで未確保':'戦利品を拾おう。持ち帰るまで未確保。';
-document.getElementById('potion').disabled=s.over;document.getElementById('escape').disabled=s.over;document.getElementById('descend').disabled=s.over;
-}
-document.querySelectorAll('[data-move]').forEach(b=>b.addEventListener('click',()=>move(...b.dataset.move.split(',').map(Number))));
-document.getElementById('potion').onclick=potion;document.getElementById('escape').onclick=escape;document.getElementById('descend').onclick=descend;
-document.getElementById('restart').onclick=()=>{document.getElementById('overlay').style.display='none';init()};
-document.getElementById('continue').onclick=()=>{document.getElementById('overlay').style.display='none';const keep={gold:s.gold,escapes:s.escapes,found:s.found,secured:s.secured,best:s.best};init(keep);say('拠点から再出発。過去の記録は残っている。')};
-window.addEventListener('keydown',e=>{const k={ArrowUp:[0,-1],w:[0,-1],ArrowDown:[0,1],s:[0,1],ArrowLeft:[-1,0],a:[-1,0],ArrowRight:[1,0],d:[1,0]};if(k[e.key]){e.preventDefault();move(...k[e.key])}});
-init();
+function frontEnemy(){return s.enemies.find(e=>e.x===s.x+s.front[0]&&e.y===s.y+s.front[1])}
+function turnToEnemy(){if(s.over)return;let targets=s.enemies.filter(e=>Math.max(Math.abs(e.x-s.x),Math.abs(e.y-s.y))<=1&&!(e.x===s.x&&e.y===s.y));if(!targets.length){say('近くにモンスターはいない。');return}targets.sort((a,b)=>(Math.abs(a.x-s.x)+Math.abs(a.y-s.y))-(Math.abs(b.x-s.x)+Math.abs(b.y-s.y)));let e=targets[0];s.front=[Math.sign(e.x-s.x),Math.sign(e.y-s.y)];say('モンスターの方を向いた。');render()}
+function doMove(dx,dy){if(s.over)return;s.front=[dx,dy];const nx=s.x+dx,ny=s.y+dy;if(blocked(nx,ny)){say('壁に阻まれた。');return}const e=s.enemies.find(e=>e.x===nx&&e.y===ny);if(e){attackEnemy(e);turnEnd();return}s.x=nx;s.y=ny;reveal();const ground=s.items.find(i=>i.x===s.x&&i.y===s.y);if(ground){s.groundPickup=ground;say('足元に道具がある。拾うか、通り過ぎるか？');}turnEnd()}
+function attackEnemy(e){let dmg=3+(s.weapon?2:0);e.hp-=dmg;say('攻撃！ '+dmg+'ダメージ。');if(e.hp<=0){s.enemies=s.enemies.filter(q=>q!==e);say('敵を倒した！');if(Math.random()<.5){let id=['stone','seed','herb'][Math.floor(Math.random()*3)];s.items.push({x:e.x,y:e.y,id,uid:++uid});say('敵が道具を落とした。')}}}
+function turnEnd(tickFood=true){if(s.over)return;if(tickFood&&s.turn%5===4){s.food=Math.max(0,s.food-1)}s.turn++;enemyTurn();if(s.food<=0){s.hp--;say('空腹でHPが減った。')}if(s.hp<=0)fail();render()}
+function enemyTurn(){if(s.over)return;for(const e of s.enemies){const d=Math.max(Math.abs(e.x-s.x),Math.abs(e.y-s.y));if(d===1){s.hp-=Math.max(1,e.atk-(s.shield?1:0));say((e.type==='bat'?'洞窟コウモリ':'迷宮ネズミ')+'の攻撃！');continue}if(d<=5){let opts=[[Math.sign(s.x-e.x),0],[0,Math.sign(s.y-e.y)]].filter(a=>a[0]||a[1]);for(const [dx,dy] of opts){let x=e.x+dx,y=e.y+dy;if(!blocked(x,y)&&!s.enemies.some(q=>q!==e&&q.x===x&&q.y===y)&&!(x===s.x&&y===s.y)){e.x=x;e.y=y;break}}}}}
+function openPickup(){if(s.over)return;const item=s.items.find(i=>i.x===s.x&&i.y===s.y);if(!item){say('足元には何もない。');return}if(s.bag.length>=CAP){popModal('<h2>持ち物がいっぱい</h2><p>何かを置いて空きを作るか、拾うのをやめます。</p><div class="itembig"><div class="bigico">'+iconOf(item.id)+'</div><div><strong>'+nameOf(item)+'</strong><small>拾うときの判断が必要だ。</small></div></div><div class="fullitems" id="replaceList"></div><button style="width:100%;margin-top:8px" id="cancelPick">拾わない</button>');let list=document.getElementById('replaceList');s.bag.forEach((it,i)=>{let b=document.createElement('button');b.className='choice';b.innerHTML='<span>'+iconOf(it.id)+'</span><span>'+displayName(it)+'<small>これを置いて拾う</small></span>';b.onclick=()=>{dropFromBag(i);s.bag.push(item);s.items=s.items.filter(q=>q.uid!==item.uid);s.groundPickup=null;closeModal();say(nameOf(item)+'を拾い、'+displayName(it)+'を置いた。');turnEnd();render()};list.appendChild(b)});document.getElementById('cancelPick').onclick=closeModal;return}
+s.bag.push(item);s.items=s.items.filter(i=>i.uid!==item.uid);s.groundPickup=null;s.found.add(item.id);say(nameOf(item)+'を拾った。');turnEnd();render()}
+function nameOf(it){return itemDefs[it.id].unknown&&!it.identified?(it.memo||itemDefs[it.id].name):itemDefs[it.id].name}
+function displayName(it){return itemDefs[it.id].unknown&&!it.identified?(it.memo||itemDefs[it.id].name):itemDefs[it.id].name}
+function iconOf(id){return itemDefs[id].icon}
+function selectItem(i){const it=s.bag[i];if(!it)return;const d=itemDefs[it.id];const unknown=d.unknown&&!it.identified;let desc=unknown?'用途不明。使ってみるか、巻物などで正体を調べよう。':d.desc;
+let buttons='';
+if(['grass','scroll','food','heal','poison','escape'].includes(d.kind))buttons+='<button data-act="use">使う</button>';
+if(d.kind==='weapon'||d.kind==='shield')buttons+='<button data-act="equip">'+((s.weapon===it||s.shield===it)?'装備中':'装備する')+'</button>';
+buttons+='<button data-act="throw">投げる</button><button data-act="drop">足元に置く</button><button data-act="discard">捨てる</button>';
+if(unknown)buttons+='<button data-act="inspect">観察する</button><button data-act="memo">名前メモを付ける</button>'; 
+buttons+='<button data-act="close">閉じる</button>';
+popModal('<h2>アイテム</h2><div class="itembig"><div class="bigico">'+d.icon+'</div><div><strong>'+displayName(it)+(s.weapon===it||s.shield===it?' <span style="color:#f4d17c">装備中</span>':'')+'</strong><small>'+desc+'</small><small>売却価値の目安：'+d.value+' G</small></div></div><div class="modalactions">'+buttons+'</div><div class="notice">※行動を伴う操作では敵も1ターン行動します。</div>');
+document.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>{const a=b.dataset.act;if(a==='close'){closeModal();return}closeModal();if(a==='use')useItem(i);if(a==='equip')equipItem(i);if(a==='throw')throwItem(i);if(a==='drop')dropItem(i);if(a==='discard')discardItem(i);if(a==='inspect')inspectItem(i);if(a==='memo')memoItem(i)})}
+function useItem(i){let it=s.bag[i];if(!it)return;let d=itemDefs[it.id];if(d.unknown&&!it.identified){it.identified=true;s.found.add(it.id);if(it.id==='herb'){const effect=Math.random();it.actual=effect<.72?'heal':'poison'}if(it.id==='scroll'){it.actual=Math.random()<.6?'identify':'map'}say('正体を確かめるために使った……');}
+let effect=it.actual||it.id;
+if(effect==='herb'||effect==='heal'||effect==='potion'){let amt=effect==='herb'?5:6;let before=s.hp;s.hp=Math.min(s.maxHp,s.hp+amt);say('HPが'+(s.hp-before)+'回復した。');removeItem(i)}
+else if(effect==='poison'||effect==='poisonHerb'){s.hp-=3;say('毒草だった！ HPが3減った。');removeItem(i)}
+else if(effect==='scroll'||effect==='identify'){let target=s.bag.find((x,j)=>j!==i&&itemDefs[x.id].unknown&&!x.identified);if(target){target.identified=true;say(target.id==='herb'?'草の正体が分かった。':'巻物の正体が分かった。');}else say('周囲に調べる対象がない。');removeItem(i)}
+else if(effect==='map'){s.seen=new Set();for(let y=0;y<N;y++)for(let x=0;x<N;x++)s.seen.add(x+','+y);say('巻物が光り、フロア全体が見えた！');removeItem(i)}
+else if(effect==='seed'){s.food=Math.min(100,s.food+25);say('満腹度が回復した。');removeItem(i)}
+else if(effect==='escape'){closeModal();secure();return}
+else{say('使い方が分からない。');}
+turnEnd();render()}
+function removeItem(i){const it=s.bag[i];if(it===s.weapon)s.weapon=null;if(it===s.shield)s.shield=null;s.bag.splice(i,1)}
+function equipItem(i){const it=s.bag[i],kind=itemDefs[it.id].kind;if(kind==='weapon'){if(s.weapon&&s.weapon!==it)say(s.weapon.name+'を外した。');s.weapon=it;say('錆びた剣を装備。攻撃力+2。')}else if(kind==='shield'){s.shield=it;say('木の盾を装備。被ダメージ-1。')}turnEnd();render()}
+function throwItem(i){const it=s.bag[i],e=frontEnemy();if(e){let dmg=it.id==='stone'?3:2;e.hp-=dmg;say(itemDefs[it.id].name+'を投げた！ '+dmg+'ダメージ。');if(e.hp<=0){s.enemies=s.enemies.filter(q=>q!==e);say('敵を倒した！')}}else{let x=s.x+s.front[0],y=s.y+s.front[1];if(blocked(x,y)){say('壁に当たって道具が足元に落ちた。')}else{s.items.push({x,y,id:it.id,uid:++uid,identified:it.identified,actual:it.actual});say(itemDefs[it.id].name+'を投げた。')}}removeItem(i);turnEnd();render()}
+function dropItem(i){const it=s.bag[i];s.items.push({x:s.x,y:s.y,id:it.id,uid:++uid,identified:it.identified,actual:it.actual});removeItem(i);say(itemDefs[it.id].name+'を足元に置いた。');closeModal();render()}
+function discardItem(i){let nm=itemDefs[s.bag[i].id].name;removeItem(i);say(nm+'を捨てた。戻せない。');turnEnd();render()}
+function dropFromBag(i){let it=s.bag[i];s.items.push({x:s.x,y:s.y,id:it.id,uid:++uid,identified:it.identified,actual:it.actual});removeItem(i)}
+function memoItem(i){const it=s.bag[i];if(!it)return;const value=window.prompt('自分用の名前メモを入力してください',it.memo||'');if(value===null)return;it.memo=value.trim().slice(0,24);say(it.memo?'道具にメモ「'+it.memo+'」を付けた。':'道具の名前メモを消した。');render()}
+function inspectItem(i){const it=s.bag[i];if(!it)return;if(it.id==='scroll'){it.identified=true;const target=s.bag.find((x,j)=>j!==i&&itemDefs[x.id].unknown&&!x.identified);if(target){target.identified=true;say('巻物を読み、'+itemDefs[target.id].name+'の正体を見破った。')}else say('巻物の文字は「道具を見極めよ」と読める。');}else if(itemDefs[it.id].unknown){say('匂い・手触りだけでは用途を断定できない。使えば正体が分かるかもしれない。')}else say(itemDefs[it.id].desc);render()}
+function showMap(){let cells='';for(let y=0;y<N;y++){for(let x=0;x<N;x++){let k=x+','+y,mark='？',color='#171a1a';if(s.seen.has(k)){mark=s.tiles[y][x]?'■':'・';color=s.tiles[y][x]?'#64675e':'#c4c1a7';if(s.items.some(it=>it.x===x&&it.y===y)){mark='◆';color='#f0d37d'}if(s.enemies.some(e=>e.x===x&&e.y===y)){mark='敵';color='#ef8a78'}if(x===9&&y===9){mark='階';color='#c1a5ef'}if(x===s.x&&y===s.y){mark='＠';color='#fff'}}cells+='<span style=\"display:grid;place-items:center;width:22px;height:22px;background:'+color+'22;color:'+color+';font-size:12px;font-weight:800;border:1px solid #44483f\">'+mark+'</span>'}}popModal('<h2>全体マップ</h2><p>探索して見つけた地形だけが表示されます。</p><div style=\"display:grid;grid-template-columns:repeat(11,22px);gap:1px;justify-content:center;background:#111;padding:5px\">'+cells+'</div><p>＠ 自分　敵 モンスター　◆ 道具　階 階段　■ 壁</p><button id=\"mapclose\" style=\"width:100%\">戻る</button>');document.getElementById('mapclose').onclick=closeModal}
+function waitTurn(){if(s.over)return;say('周囲を警戒して待機した。');turnEnd()}
+function descend(){if(s.over)return;if(s.x!==9||s.y!==9){say('階段は右下。紫色の床まで進もう。');return}s.depth++;s.hp=Math.min(s.maxHp,s.hp+1);makeFloor();say('B'+s.depth+'Fへ進んだ。敵が強くなり、珍しい道具も増えた。');render()}
+function secure(){const value=s.bag.reduce((a,it)=>a+itemDefs[it.id].value,0);s.gold+=value;s.secured+=s.bag.length;s.escapes++;s.bag=[];s.over=true;say('帰還成功。戦利品を確保：'+value+'G');document.getElementById('endtitle').textContent='帰還成功！';document.getElementById('endtext').textContent='戦利品を確保しました。今回の獲得 '+value+' G。';document.getElementById('endwrap').style.display='grid';render()}
+function escape(){if(s.over)return;if(s.x===1&&s.y===1){secure();return}say('帰還口は左上。そこまで戻るか、帰還の巻物を使おう。')}
+function fail(){if(s.over)return;s.over=true;s.bag=[];say('力尽きた。今回の未確保品を失った。');document.getElementById('endtitle').textContent='力尽きた';document.getElementById('endtext').textContent='今回の持ち物は失われました。発見記録と過去に持ち帰った資金は残ります。';document.getElementById('endwrap').style.display='grid'}
+function tile(x,y){let px=x*T,py=y*T;if(!s.seen.has(x+','+y)){c.fillStyle='#080d12';c.fillRect(px,py,T,T);return}if(s.tiles[y][x]){c.fillStyle='#2b3b42';c.fillRect(px,py,T,T);c.fillStyle='#3d4f54';c.fillRect(px+1,py+1,T-2,3);c.fillStyle='#1b282e';c.fillRect(px+2,py+9,T-4,2);c.fillRect(px+5,py+24,6,3)}else{c.fillStyle=((x*13+y*7)%4===0)?'#5d604a':'#4c5141';c.fillRect(px,py,T,T);c.fillStyle='#73735a';c.fillRect(px+2,py+3,T-4,1);c.fillStyle='#404739';c.fillRect(px+8,py+15,3,2);c.fillRect(px+26,py+27,4,2)}}
+function drawHero(x,y){let a=x*T,b=y*T;const r=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(a+x,b+y,w,h)};r(10,31,21,4,'#27251e');r(13,25,7,7,'#75472f');r(23,25,7,7,'#75472f');r(11,15,20,13,'#3e8069');r(9,17,5,10,'#c49a58');r(28,17,5,10,'#c49a58');r(13,6,17,13,'#d6a16c');r(10,4,22,7,'#50392a');r(14,1,14,5,'#7c5738');r(15,10,3,3,'#292522');r(24,10,3,3,'#292522');r(18,15,7,2,'#f2d6a2');r(31,14,3,15,'#c9d1c5');r(29,12,6,4,'#f2dfae')}
+function drawEnemy(e){let a=e.x*T,b=e.y*T;const r=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(a+x,b+y,w,h)};r(10,31,21,4,'#24221c');if(e.type==='bat'){r(4,13,12,9,'#574a70');r(25,13,12,9,'#574a70');r(11,10,18,16,'#78658b');r(14,7,5,5,'#b8a4c7');r(23,7,5,5,'#b8a4c7');r(14,15,4,4,'#f4dc79');r(23,15,4,4,'#f4dc79')}else{r(9,14,23,14,'#796d57');r(11,9,18,13,'#9c8b6d');r(12,5,5,7,'#b5a284');r(24,5,5,7,'#b5a284');r(14,14,4,4,'#ec6b58');r(24,14,4,4,'#ec6b58')}}
+function drawItem(it){let a=it.x*T,b=it.y*T;const r=(x,y,w,h,col)=>{c.fillStyle=col;c.fillRect(a+x,b+y,w,h)};let id=it.id;if(id==='herb'||id==='poison'){r(18,18,4,13,'#568f43');r(8,15,15,7,id==='poison'?'#9a9e54':'#8dc96a');r(20,9,12,8,id==='poison'?'#777b45':'#a5dc73')}else if(id==='scroll'||id==='escape'){r(12,11,17,21,'#c8b888');r(15,14,11,15,id==='escape'?'#6e81bd':'#e5d8ae');r(17,17,7,2,'#8e7950');r(17,22,7,2,'#8e7950')}else if(id==='seed'){r(13,14,15,16,'#986e3e');r(16,11,10,17,'#bd8a4c');r(19,14,4,9,'#e0bd76')}else if(id==='potion'){r(17,8,9,5,'#d8c8a3');r(15,12,13,18,'#4aa9c8');r(18,15,7,10,'#9be6e9')}else if(id==='stone'){r(12,17,17,13,'#858f91');r(15,12,13,15,'#aeb8b3');r(19,15,5,8,'#d6ded5')}else if(id==='sword'){r(18,7,5,20,'#d5dfdf');r(14,12,13,4,'#f4f0cf');r(19,26,4,7,'#946c43')}else if(id==='shield'){r(12,10,18,21,'#8b6848');r(15,13,12,14,'#b48b5a');r(19,13,4,14,'#e0c78a')}if(it.id==='relic'){r(15,9,12,22,'#f3d57c')}}
+function render(){reveal();c.clearRect(0,0,440,440);for(let y=0;y<N;y++)for(let x=0;x<N;x++)tile(x,y);for(const it of s.items)if(s.seen.has(it.x+','+it.y))drawItem(it);for(const e of s.enemies)if(s.seen.has(e.x+','+e.y))drawEnemy(e);if(s.seen.has('1,1')){c.fillStyle='#b48c4d';c.fillRect(50,50,20,20);c.fillStyle='#58452b';c.fillRect(56,56,8,14)}if(s.seen.has('9,9')){c.fillStyle='#63528b';c.fillRect(368,368,24,24);c.fillStyle='#bba7e6';c.fillRect(373,373,14,14)}drawHero(s.x,s.y);
+document.getElementById('hptext').textContent=s.hp+' / '+s.maxHp;document.getElementById('hpbar').style.width=s.hp/s.maxHp*100+'%';document.getElementById('foodtext').textContent=s.food+'%';document.getElementById('foodbar').style.width=s.food+'%';document.getElementById('depthtext').textContent='B'+s.depth+'F';document.getElementById('goldtext').textContent=s.gold+' G';document.getElementById('floorlabel').textContent='古い遺跡 · B'+s.depth+'F';document.getElementById('task').textContent=s.bag.length?'所持品 '+s.bag.length+'/'+CAP:'探索中';document.getElementById('liveinfo').textContent='ターン '+s.turn+'　｜　装備 '+(s.weapon?'剣':'なし')+' / '+(s.shield?'盾':'なし');document.getElementById('groundinfo').textContent='足元：'+(s.items.some(it=>it.x===s.x&&it.y===s.y)?'道具あり（拾う操作が必要）':'何もない');
+let bag=document.getElementById('bag');bag.innerHTML='';for(let i=0;i<CAP;i++){let el=document.createElement('button');el.className='slot'+(i>=s.bag.length?' empty':'');if(i<s.bag.length){let it=s.bag[i],d=itemDefs[it.id];el.innerHTML='<span class="ico">'+d.icon+'</span><span class="nm">'+displayName(it)+'</span>'; if(it===s.weapon||it===s.shield)el.classList.add('equipped');el.onclick=()=>selectItem(i)}else{el.textContent='空き';el.disabled=true}bag.appendChild(el)}
+document.getElementById('baghint').textContent=s.bag.length+'/'+CAP+'個。金枠は装備中。スロットを選んでアイテム操作。';
+document.getElementById('pickup').disabled=s.over;document.getElementById('attack').disabled=s.over;document.getElementById('turnto').disabled=s.over;document.getElementById('escape').disabled=s.over;document.getElementById('descend').disabled=s.over;document.getElementById('wait').disabled=s.over;document.getElementById('mapbtn').disabled=s.over}
+document.querySelectorAll('[data-move]').forEach(b=>b.onclick=()=>doMove(...b.dataset.move.split(',').map(Number)));
+document.getElementById('pickup').onclick=openPickup;document.getElementById('turnto').onclick=turnToEnemy;document.getElementById('attack').onclick=()=>{if(s.over)return;let e=frontEnemy();if(e)attackEnemy(e);else say('正面に敵はいない。');turnEnd()};
+document.getElementById('escape').onclick=escape;document.getElementById('descend').onclick=descend;document.getElementById('wait').onclick=waitTurn;document.getElementById('mapbtn').onclick=showMap;
+document.getElementById('restart').onclick=()=>{closeModal();document.getElementById('endwrap').style.display='none';fresh()};
+document.getElementById('continue').onclick=()=>{document.getElementById('endwrap').style.display='none';fresh({gold:s.gold,escapes:s.escapes,secured:s.secured,found:s.found,best:s.best})};
+window.addEventListener('keydown',e=>{let m={ArrowUp:[0,-1],w:[0,-1],ArrowDown:[0,1],s:[0,1],ArrowLeft:[-1,0],a:[-1,0],ArrowRight:[1,0],d:[1,0],q:[-1,-1],e:[1,-1],z:[-1,1],c:[1,1]};if(m[e.key]){e.preventDefault();doMove(...m[e.key])}});
+fresh();
 })();
-</script>
-</body>
-</html>
+</script></body></html>
