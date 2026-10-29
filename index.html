@@ -227,7 +227,7 @@ let damageLoop=false;function popupDamage(x,y,value,type='hit'){if(!s.damageText
 function popModal(html){document.getElementById('modal').innerHTML=html;document.getElementById('modalwrap').style.display='grid'}
 function closeModal(){document.getElementById('modalwrap').style.display='none'}
 function end(title,text){document.getElementById('endtitle').textContent=title;document.getElementById('endtext').textContent=text;document.getElementById('endwrap').style.display='grid'}
-function reveal(){for(let dy=-4;dy<=4;dy++)for(let dx=-4;dx<=4;dx++){const x=s.x+dx,y=s.y+dy;if(Math.abs(dx)+Math.abs(dy)<=4&&x>=0&&y>=0&&x<N&&y<N&&lineClear(s.x,s.y,x,y))s.seen.add(x+','+y)}}
+function reveal(){let room=null;for(const r of (s.rooms||[]))if(s.x>=r.x&&s.x<r.x+r.w&&s.y>=r.y&&s.y<r.y+r.h){room=r;break}if(room){for(let y=room.y;y<room.y+room.h;y++)for(let x=room.x;x<room.x+room.w;x++)s.seen.add(x+','+y);for(let y=room.y-1;y<=room.y+room.h;y++)for(let x=room.x-1;x<=room.x+room.w;x++)if(x>=0&&y>=0&&x<N&&y<N&&lineClear(s.x,s.y,x,y))s.seen.add(x+','+y)}for(let dy=-4;dy<=4;dy++)for(let dx=-4;dx<=4;dx++){const x=s.x+dx,y=s.y+dy;if(Math.abs(dx)+Math.abs(dy)<=4&&x>=0&&y>=0&&x<N&&y<N&&lineClear(s.x,s.y,x,y))s.seen.add(x+','+y)}}
 function blocked(x,y){return x<0||y<0||x>=N||y>=N||s.tiles[y][x]===1}
 function canStep(x,y,dx,dy){const nx=x+dx,ny=y+dy;if(blocked(nx,ny))return false;if(dx&&dy&&(blocked(x+dx,y)||blocked(x,y+dy)))return false;return true;}
 function makeItem(x,y,id,extra={}){const it={x,y,id,uid:++uid,...extra};if(id==='herb'&&!('actual'in it))it.actual=Math.random()<.72?'heal':'poison';if(id==='scroll'&&!('actual'in it)){const r=Math.random();it.actual=r<.42?'identify':r<.78?'map':'sleep';}return it;}
