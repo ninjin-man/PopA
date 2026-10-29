@@ -82,24 +82,23 @@ const itemDefs={
 // 追加アイテム群：効果はこの試作向けに独自調整。原作の名称・効果をそのまま複製するのではなく、判断の幅を参考にしている。
 Object.assign(itemDefs,{
  // 草・種（既存の正体不明の草、毒草を含めて10種）
- strengthHerb:{name:'力の草',icon:'🌱',value:35,kind:'grass',effect:'strength',desc:'この探索中の攻撃力が2上がる。'},
+ strengthHerb:{name:'力の草',icon:'🌱',value:35,kind:'grass',effect:'strength',desc:'10ターン、攻撃力が2上がる。'},
  quickHerb:{name:'素早さ草',icon:'🍃',value:32,kind:'grass',effect:'quick',desc:'次の3ターン、敵の行動を一度おきに無効化する。'},
- confusionHerb:{name:'混乱草',icon:'🌀',value:25,kind:'grass',effect:'confuse',desc:'視界内の敵を3ターン行動不能にする。'},
+ confusionHerb:{name:'混乱草',icon:'🌀',value:25,kind:'grass',effect:'confuse',desc:'フロアの敵を3ターン行動不能にする。'},
  sleepHerb:{name:'睡眠草',icon:'💤',value:28,kind:'grass',effect:'sleep',desc:'最も近い敵を4ターン眠らせる。'},
  jumpHerb:{name:'高飛び草',icon:'🪶',value:30,kind:'grass',effect:'jump',desc:'別の場所へランダムにワープする。'},
  lifeHerb:{name:'命の草',icon:'❤️',value:60,kind:'grass',effect:'life',desc:'最大HPと現在HPが3上がる。'},
  weakHerb:{name:'弱体の草',icon:'🥀',value:22,kind:'grass',effect:'weak',desc:'正面の敵を弱らせ、攻撃力を下げる。'},
- eyeHerb:{name:'目薬草',icon:'👁️',value:24,kind:'grass',effect:'eye',desc:'未踏の地形を含めフロア全体を見渡せる。'},
+ eyeHerb:{name:'目薬草',icon:'👁️',value:24,kind:'grass',effect:'eye',desc:'罠と姿を隠している敵が見えるようになる。'},
  // 巻物（既存の未識別巻物と帰還の巻物に加え、個別効果を追加）
  identifyScroll:{name:'識別の巻物',icon:'📜',value:35,kind:'scroll',effect:'identify',desc:'持ち物から未識別の道具を1つ識別する。'},
  mapScroll:{name:'あかりの巻物',icon:'🗺️',value:32,kind:'scroll',effect:'map',desc:'フロア全体を明らかにする。'},
  sleepScroll:{name:'眠りの巻物',icon:'🌙',value:45,kind:'scroll',effect:'sleepAll',desc:'フロアの敵を3ターン眠らせる。'},
  blastScroll:{name:'爆発の巻物',icon:'💥',value:55,kind:'scroll',effect:'blast',desc:'フロアの敵全員に5ダメージ。'},
  quakeScroll:{name:'地鳴りの巻物',icon:'🌋',value:48,kind:'scroll',effect:'quake',desc:'隣接する敵全員に8ダメージ。'},
- powerScroll:{name:'力増幅の巻物',icon:'⚔️',value:42,kind:'scroll',effect:'power',desc:'この探索中の攻撃力が2上がる。'},
+ powerScroll:{name:'力増幅の巻物',icon:'⚔️',value:42,kind:'scroll',effect:'power',desc:'10ターン、攻撃力が2上がる。'},
  shieldScroll:{name:'守りの巻物',icon:'🛡️',value:42,kind:'scroll',effect:'guard',desc:'次の5回の被ダメージを2減らす。'},
  monsterScroll:{name:'招きの巻物',icon:'👹',value:8,kind:'scroll',effect:'summon',desc:'敵を追加で呼び寄せる危険な巻物。'},
- renewScroll:{name:'再生の巻物',icon:'✨',value:48,kind:'scroll',effect:'renew',desc:'HPを8回復する。最大HPの半分以下ならさらに2回復する。'},
  // 杖10種。回数を使い切るまで保持する。
  knockStaff:{name:'吹き飛ばしの杖',icon:'🪄',value:45,kind:'staff',staffEffect:'knock',charges:3,desc:'正面の敵を吹き飛ばし、3ダメージ。'},
  sleepStaff:{name:'睡眠の杖',icon:'🪄',value:55,kind:'staff',staffEffect:'sleep',charges:3,desc:'正面の敵を4ターン眠らせる。'},
@@ -109,7 +108,7 @@ Object.assign(itemDefs,{
  lightningStaff:{name:'雷撃の杖',icon:'⚡',value:65,kind:'staff',staffEffect:'damage',charges:3,desc:'正面の敵に7ダメージ。'},
  poisonStaff:{name:'毒の杖',icon:'🪄',value:50,kind:'staff',staffEffect:'poison',charges:3,desc:'正面の敵を毒状態にする。'},
  sealStaff:{name:'封印の杖',icon:'🪄',value:60,kind:'staff',staffEffect:'seal',charges:2,desc:'正面の敵を3ターン行動不能にする。'},
- pushStaff:{name:'転移の杖',icon:'🪄',value:48,kind:'staff',staffEffect:'push',charges:3,desc:'正面の敵を数マス後退させる。'},
+ pushStaff:{name:'転移の杖',icon:'🪄',value:48,kind:'staff',staffEffect:'push',charges:3,desc:'正面の敵を2マス後退させる。'},
  shareStaff:{name:'痛み分けの杖',icon:'🪄',value:52,kind:'staff',staffEffect:'share',charges:2,desc:'正面の敵に痛み分け状態を付与する。'},
  // 腕輪10種。1つだけ装備可能。
  hungerBracelet:{name:'腹持ちの腕輪',icon:'📿',value:90,kind:'bracelet',braceletEffect:'hunger',desc:'満腹度の減少を半分にする。'},
@@ -141,16 +140,16 @@ Object.assign(itemDefs,{
  mushroom:{name:'食用キノコ',icon:'🍄',value:18,kind:'food',foodGain:22,desc:'満腹度を22回復する。'},
  honey:{name:'蜂蜜瓶',icon:'🍯',value:30,kind:'food',foodGain:32,desc:'満腹度を32回復する。'},
  hardBread:{name:'硬い保存パン',icon:'🥖',value:15,kind:'food',foodGain:25,desc:'満腹度を25回復する。'},
- staleRice:{name:'古いおにぎり',icon:'🍙',value:2,kind:'food',foodGain:8,desc:'満腹度を8回復するが、HPを2失う。'},
+ staleRice:{name:'古いおにぎり',icon:'🍙',value:2,kind:'food',foodGain:8,desc:'満腹度を8回復するが、HPが2減る（HPは1未満にならない）。'},
  royalMeal:{name:'旅人の弁当',icon:'🍱',value:50,kind:'food',foodGain:55,desc:'満腹度を55回復する。'},
  // 投擲道具10種（既存の投げ石を含む）
  ironStone:{name:'鉄の石',icon:'⚫',value:18,kind:'throw',throwDamage:6,desc:'投げると正面の敵に6ダメージ。'},
- fireFlask:{name:'火炎瓶',icon:'🔥',value:45,kind:'throw',throwDamage:5,throwEffect:'burn',desc:'命中した敵に5ダメージ。'},
+ fireFlask:{name:'火炎瓶',icon:'🔥',value:45,kind:'throw',throwDamage:5,throwEffect:'burn',desc:'命中した敵に5ダメージを与え、毒状態にする。'},
  poisonDart:{name:'毒針',icon:'📍',value:30,kind:'throw',throwDamage:2,throwEffect:'poison',desc:'命中した敵に2ダメージと毒。'},
  sleepNut:{name:'眠り木の実',icon:'🌰',value:32,kind:'throw',throwDamage:1,throwEffect:'sleep',desc:'命中した敵を3ターン眠らせる。'},
  flashOrb:{name:'閃光玉',icon:'🔆',value:35,kind:'throw',throwDamage:1,throwEffect:'sleep',desc:'命中した敵を3ターン眠らせる。'},
  heavyRock:{name:'大岩',icon:'🪨',value:28,kind:'throw',throwDamage:9,desc:'重い岩を投げ、9ダメージ。'},
- bindingBall:{name:'拘束玉',icon:'🔵',value:38,kind:'throw',throwDamage:1,throwEffect:'bind',desc:'命中した敵を3ターン足止めする。'},
+ bindingBall:{name:'拘束玉',icon:'🔵',value:38,kind:'throw',throwDamage:1,throwEffect:'bind',desc:'命中した敵を3ターン眠らせる。'},
  silverNeedle:{name:'銀の針',icon:'🪡',value:42,kind:'throw',throwDamage:4,desc:'命中した敵に4ダメージ。'},
  cursedBone:{name:'呪い骨',icon:'🦴',value:8,kind:'throw',throwDamage:2,throwEffect:'poison',desc:'命中した敵に2ダメージと毒。'}
 });
@@ -196,7 +195,7 @@ function makeFloor(){
   for(let i=0;i<n&&enemyCells.length;i++){const [x,y]=enemyCells.pop(),type=types[i],inf=enemyInfo[type];s.enemies.push({x,y,type,hp:inf.hp+Math.floor((s.depth-1)*1.1),atk:inf.atk+Math.floor((s.depth-1)*.6),sleep:0,alert:0,targetX:null,targetY:null,stole:false,drainCooldown:0});}
   const enemySet=new Set(s.enemies.map(e=>e.x+','+e.y));cells=cells.filter(([x,y])=>!enemySet.has(x+','+y));
   const trapCount=3+Math.floor(Math.random()*3);const trapTypes=['spike','pit','snare','alarm'];for(let i=0;i<trapCount&&cells.length;i++){const j=Math.floor(Math.random()*cells.length),[x,y]=cells.splice(j,1)[0];s.traps.push({x,y,type:trapTypes[Math.floor(Math.random()*trapTypes.length)],revealed:false,triggered:false});}
-  const pool=s.depth===1?['herb','scroll','seed','potion','stone','sword','shortSword','club','shield','leatherShield','bronzeShield','stone','rice','berry','hardBread','ironStone','sleepHerb','strengthHerb','knockStaff','hungerBracelet']:['herb','scroll','seed','potion','stone','escape','poison','broadSword','ironSword','katana','battleAxe','ironShield','heavyShield','spikedShield','dragonShield','rice','bigRice','driedMeat','ironStone','poisonDart','sleepStaff','slowStaff','swapStaff','hungerBracelet','powerBracelet','healJar','identifyJar','mapScroll','blastScroll','renewScroll'];
+  const pool=s.depth===1?['herb','scroll','seed','potion','stone','sword','shortSword','club','shield','leatherShield','bronzeShield','stone','rice','berry','hardBread','ironStone','sleepHerb','strengthHerb','knockStaff','hungerBracelet']:['herb','scroll','seed','potion','stone','escape','poison','broadSword','ironSword','katana','battleAxe','ironShield','heavyShield','spikedShield','dragonShield','rice','bigRice','driedMeat','ironStone','poisonDart','sleepStaff','slowStaff','swapStaff','hungerBracelet','powerBracelet','healJar','identifyJar','mapScroll','blastScroll'];
   if(s.depth>=3)pool.push('relic','crystalBlade','windBlade','towerShield','windShield','lightningStaff','sealStaff','fortuneBracelet','dodgeBracelet','escapeJar','royalMeal','heavyRock','changeJar','powerScroll');
   // 図鑑に載る道具は実際の抽選候補にも入れる。希少品だけは深層限定。
   const rareIds=new Set(['relic','crystalBlade','windBlade','towerShield','windShield','lightningStaff','sealStaff','fortuneBracelet','dodgeBracelet','escapeJar','royalMeal','heavyRock','changeJar','powerScroll']);
@@ -277,12 +276,14 @@ buttons+='<button data-act="throw">投げる</button><button data-act="drop">足
 if(unknown)buttons+='<button data-act="inspect">観察する</button>';
 buttons+='<button data-act="close">閉じる</button>';
 popModal('<h2>アイテム</h2><div class="itembig"><div class="bigico">'+d.icon+'</div><div><strong>'+displayName(it)+(s.weapon===it||s.shield===it?' <span style="color:#f4d17c">装備中</span>':'')+'</strong><small>'+desc+'</small><small>売却価値の目安：'+d.value+' G</small></div></div><div class="modalactions">'+buttons+'</div><div class="notice">※行動を伴う操作では敵も1ターン行動します。</div>');
-document.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>{const a=b.dataset.act;if(a==='close'){closeModal();return}closeModal();if(a==='use')useItem(i);if(a==='staff')useStaff(i);if(a==='equip')equipItem(i);if(a==='throw')throwItem(i);if(a==='drop')dropItem(i);if(a==='discard')discardItem(i);if(a==='inspect')inspectItem(i)})}
+document.querySelectorAll('[data-act]').forEach(b=>b.onclick=()=>{const a=b.dataset.act;if(a==='close'){closeModal();return}closeModal();if(a==='use'){if(d.jarEffect==='change')chooseChangeTarget(i);else useItem(i)}if(a==='staff')useStaff(i);if(a==='equip')equipItem(i);if(a==='throw')throwItem(i);if(a==='drop')dropItem(i);if(a==='discard')discardItem(i);if(a==='inspect')inspectItem(i)})}
+function chooseChangeTarget(jarIndex){const jar=s.bag[jarIndex];if(!jar)return;const targets=s.bag.filter(q=>q!==jar);if(!targets.length){say('変化させる道具がない。');removeItem(jarIndex);turnEnd();render();return}let html='<h2>変化させる道具を選ぶ</h2><p>選んだ道具が別の道具に変わります。</p><div class="fullitems">';for(const target of targets){const d=itemDefs[target.id];html+='<button class="choice" data-change-target="'+target.uid+'"><span>'+d.icon+'</span><span><strong>'+displayName(target)+'</strong><small>'+d.desc+'</small></span></button>'}html+='</div><button id="changeCancel" style="width:100%;margin-top:8px">やめる</button>';popModal(html);document.querySelectorAll('[data-change-target]').forEach(b=>b.onclick=()=>{closeModal();changeJarTarget(jar.uid,Number(b.dataset.changeTarget))});document.getElementById('changeCancel').onclick=()=>{closeModal()}}
+function changeJarTarget(jarUid,targetUid){const jar=s.bag.find(q=>q.uid===jarUid),target=s.bag.find(q=>q.uid===targetUid);if(!jar||!target||jar===target)return;const candidates=Object.keys(itemDefs).filter(id=>itemDefs[id].kind!=='weapon'&&itemDefs[id].kind!=='shield'&&itemDefs[id].kind!=='bracelet'&&id!==jar.id);if(!candidates.length)return;if(s.weapon===target)s.weapon=null;if(s.shield===target)s.shield=null;if(s.bracelet===target)s.bracelet=null;const id=candidates[Math.floor(Math.random()*candidates.length)];target.id=id;delete target.actual;delete target.charges;target.identified=false;say(displayName(target)+'が別の道具に変わった！');removeItem(s.bag.indexOf(jar));turnEnd();render()}
 function useItem(i){const it=s.bag[i];if(!it)return;const d=itemDefs[it.id];if(d.unknown&&!it.identified){it.identified=true;s.found.add(it.id);say('正体が分かった。 '+displayName(it));}const effect=it.actual||d.effect||d.jarEffect||it.id;
 if(effect==='heal'||effect==='herb'||effect==='potion'||effect==='healJar'){const amount=effect==='potion'?6:effect==='healJar'?Math.ceil(s.maxHp/2):5,before=s.hp;s.hp=Math.min(s.maxHp,s.hp+amount);say('HPが'+(s.hp-before)+'回復した。');removeItem(i)}
 else if(effect==='poison'){if(s.bracelet&&itemDefs[s.bracelet.id].braceletEffect==='poison')say('毒消しの腕輪が毒を打ち消した。');else{s.hp-=3;say('毒草だった！ HPが3減った。')}removeItem(i)}
 else if(effect==='identify'||effect==='identifyJar'){let n=0;for(const target of s.bag){if(target!==it&&itemDefs[target.id].unknown&&!target.identified&&n<(effect==='identifyJar'?2:1)){target.identified=true;n++;}}say(n?'道具を'+n+'つ識別した。':'識別できる道具がない。');removeItem(i)}
-else if(effect==='eye'){for(const t of s.traps)t.revealed=true;say('目薬草の効果でフロアの罠が見えるようになった。');removeItem(i)}
+else if(effect==='eye'){for(const t of s.traps)t.revealed=true;for(const e of s.enemies)if(e.invisible)e.revealed=true;say('目薬草の効果で罠と隠れていた敵が見えるようになった。');removeItem(i)}
 else if(effect==='map'||effect==='mapJar'){for(let y=0;y<N;y++)for(let x=0;x<N;x++)s.seen.add(x+','+y);say('フロア全体が明らかになった！');removeItem(i)}
 else if(effect==='sleep'||effect==='sleepAll'||effect==='sleepJar'){const list=effect==='sleep'?s.enemies.slice().sort((a,b)=>Math.max(Math.abs(a.x-s.x),Math.abs(a.y-s.y))-Math.max(Math.abs(b.x-s.x),Math.abs(b.y-s.y))).slice(0,1):s.enemies;for(const e of list)e.sleep=Math.max(e.sleep||0,effect==='sleep'?4:effect==='sleepJar'?2:3);say(effect==='sleep'?'最も近い敵が眠りについた。':'フロアの敵が眠りについた！');removeItem(i)}
 else if(effect==='seed'||d.foodGain){const gain=d.foodGain||(effect==='seed'?25:0),before=s.food;s.food=Math.min(100,s.food+gain);if(it.id==='staleRice')s.hp=Math.max(1,s.hp-2);say('満腹度が'+(s.food-before)+'回復した。');removeItem(i)}
@@ -296,7 +297,7 @@ else if(effect==='blast'||effect==='blastLocal'){const targets=effect==='blastLo
 else if(effect==='quake'){const near=s.enemies.filter(e=>Math.max(Math.abs(e.x-s.x),Math.abs(e.y-s.y))<=1);for(const e of near){e.hp-=8;if(e.hp<=0)defeatEnemy(e)}say('地鳴りが隣接する敵を襲った。');removeItem(i)}
 else if(effect==='guard'){s.guardHits=Math.max(s.guardHits,5);say('守りが固まった。次の5回の被ダメージを2軽減する。');removeItem(i)}
 else if(effect==='summon'){const free=[];for(let y=1;y<N-1;y++)for(let x=1;x<N-1;x++)if(!blocked(x,y)&&Math.max(Math.abs(x-s.x),Math.abs(y-s.y))>2&&!s.enemies.some(e=>e.x===x&&e.y===y)&&!s.items.some(q=>q.x===x&&q.y===y))free.push([x,y]);for(let k=0;k<Math.min(3,free.length);k++){const j=Math.floor(Math.random()*free.length),[x,y]=free.splice(j,1)[0],type=['rat','bat','runner'][Math.floor(Math.random()*3)],inf=enemyInfo[type];s.enemies.push({x,y,type,hp:inf.hp+Math.floor((s.depth-1)*1.1),atk:inf.atk+Math.floor((s.depth-1)*.6),sleep:0,alert:0,targetX:null,targetY:null})}say('魔物を呼び寄せてしまった！');removeItem(i)}
-else if(effect==='change'||effect==='changeJar'){const candidates=Object.keys(itemDefs).filter(id=>itemDefs[id].kind!=='weapon'&&itemDefs[id].kind!=='shield'&&itemDefs[id].kind!=='bracelet'&&id!==it.id);const target=s.bag.find((q,j)=>j!==i);if(target){const id=candidates[Math.floor(Math.random()*candidates.length)];target.id=id;delete target.actual;target.identified=false;say('持ち物のひとつが別の道具に変わった！')}else say('変化させる道具がない。');removeItem(i)}
+
 else if(effect==='food'){const before=s.food;s.food=Math.min(100,s.food+50);say('満腹度が'+(s.food-before)+'回復した。');removeItem(i)}
 else if(effect==='escape'||effect==='escapeJar'){secure();return}
 else{say('使い方が分からない。');}turnEnd();}
@@ -304,7 +305,7 @@ function useStaff(i){const it=s.bag[i],d=itemDefs[it.id];if(!it||!d||d.kind!=='s
 
 function removeItem(i){const it=s.bag[i];if(it===s.weapon)s.weapon=null;if(it===s.shield)s.shield=null;if(it===s.bracelet)s.bracelet=null;s.bag.splice(i,1)}
 function equipItem(i){const it=s.bag[i],d=itemDefs[it.id],kind=d.kind;if(kind==='weapon'){if(s.weapon&&s.weapon!==it)say(displayName(s.weapon)+'を外した。');s.weapon=it;say(displayName(it)+'を装備。攻撃力+'+(d.attack||0)+'。')}else if(kind==='shield'){s.shield=it;say(displayName(it)+'を装備。被ダメージ-'+(d.defense||0)+'。')}else if(kind==='bracelet'){s.bracelet=it;say(displayName(it)+'を装備。'+d.desc)}turnEnd();render()}
-function throwItem(i){const it=s.bag[i],dx=s.front[0],dy=s.front[1];let x=s.x,y=s.y,hit=null;for(let step=0;step<4;step++){const nx=x+dx,ny=y+dy;if(blocked(nx,ny))break;x=nx;y=ny;hit=s.enemies.find(e=>e.x===x&&e.y===y);if(hit)break}if(hit){const d=itemDefs[it.id],poisonHerb=(it.id==='herb'&&it.actual==='poison')||d.throwEffect==='poison';const dmg=d.throwDamage||(it.id==='stone'?3:1);hit.hp-=dmg;popupDamage(hit.x,hit.y,dmg,'hit');if(poisonHerb){hit.poison=Math.max(hit.poison||0,3);it.identified=true;say(displayName(it)+'を投げつけた！ '+enemyInfo[hit.type].name+'は毒状態になった。')}else if(d.throwEffect==='sleep'||d.throwEffect==='bind'){hit.sleep=Math.max(hit.sleep||0,3);say(displayName(it)+'が命中し、敵の動きを封じた。')}else{say(displayName(it)+'を投げた！ '+dmg+'ダメージ。');if(d.throwEffect==='burn'){hit.poison=Math.max(hit.poison||0,2)}if(it.id==='herb'&&it.actual==='heal')it.identified=true}if(hit.hp<=0)defeatEnemy(hit)}else if(x!==s.x||y!==s.y){placeGroundItem(x,y,it.id,{identified:it.identified,actual:it.actual});say(displayName(it)+'を投げた。')}else say('投げた道具は壁に当たり、足元に落ちた。');removeItem(i);turnEnd();}
+function throwItem(i){const it=s.bag[i],dx=s.front[0],dy=s.front[1];let x=s.x,y=s.y,hit=null;for(let step=0;step<4;step++){const nx=x+dx,ny=y+dy;if(blocked(nx,ny))break;x=nx;y=ny;hit=s.enemies.find(e=>e.x===x&&e.y===y);if(hit)break}if(hit){const d=itemDefs[it.id],poisonHerb=(it.id==='herb'&&it.actual==='poison')||d.throwEffect==='poison';const dmg=d.throwDamage||(it.id==='stone'?3:1);hit.hp-=dmg;popupDamage(hit.x,hit.y,dmg,'hit');if(poisonHerb){hit.poison=Math.max(hit.poison||0,3);it.identified=true;say(displayName(it)+'を投げつけた！ '+enemyInfo[hit.type].name+'は毒状態になった。')}else if(d.throwEffect==='sleep'||d.throwEffect==='bind'){hit.sleep=Math.max(hit.sleep||0,3);say(displayName(it)+'が命中し、敵の動きを封じた。')}else{say(displayName(it)+'を投げた！ '+dmg+'ダメージ。');if(d.throwEffect==='burn'){hit.poison=Math.max(hit.poison||0,2)}if(it.id==='herb'&&it.actual==='heal')it.identified=true}if(hit.hp<=0)defeatEnemy(hit)}else if(x!==s.x||y!==s.y){placeGroundItem(x,y,it.id,{identified:it.identified,actual:it.actual});say(displayName(it)+'を投げた。')}else{placeGroundItem(s.x,s.y,it.id,{identified:it.identified,actual:it.actual});say('投げた道具は壁に当たり、足元に落ちた。')}removeItem(i);turnEnd();}
 function dropItem(i){const it=s.bag[i];placeGroundItem(s.x,s.y,it.id,{identified:it.identified,actual:it.actual});removeItem(i);say(displayName(it)+'を足元に置いた。');closeModal();turnEnd();}
 function discardItem(i){let nm=itemDefs[s.bag[i].id].name;removeItem(i);say(nm+'を捨てた。戻せない。');turnEnd();render()}
 function dropFromBag(i){const it=s.bag[i];placeGroundItem(s.x,s.y,it.id,{identified:it.identified,actual:it.actual});removeItem(i)}
@@ -331,7 +332,7 @@ function drawItem(it){let a=it.x*T,b=it.y*T;const r=(x,y,w,h,col)=>{c.fillStyle=
 function render(){reveal();c.clearRect(0,0,440,440);c.save();
 // カメラをプレイヤーに追従させ、キャラクターは画面中央に固定してマップ側を動かす
 const camX=(Math.floor(440/T)/2|0)-s.x,camY=(Math.floor(440/T)/2|0)-s.y;c.translate(camX*T,camY*T);
-for(let y=0;y<N;y++)for(let x=0;x<N;x++)tile(x,y);for(const it of s.items)if(s.seen.has(it.x+','+it.y))drawItem(it);for(const t of s.traps)if(t.revealed&&s.seen.has(t.x+','+t.y)){c.fillStyle=t.triggered?'#a85e54':'#e0c16b';c.fillRect(t.x*T+14,t.y*T+14,12,12);c.fillStyle='#28231b';c.fillRect(t.x*T+18,t.y*T+17,4,6)}for(const e of s.enemies)if(s.seen.has(e.x+','+e.y))drawEnemy(e);if(s.seen.has('2,2')){c.fillStyle='#b48c4d';c.fillRect(2*T+10,2*T+10,20,20);c.fillStyle='#58452b';c.fillRect(2*T+16,2*T+16,8,14)}const stair=N-4;if(s.seen.has(stair+','+stair)){c.fillStyle='#63528b';c.fillRect(stair*T+8,stair*T+8,24,24);c.fillStyle='#bba7e6';c.fillRect(stair*T+13,stair*T+13,14,14)}drawHero(s.x,s.y);const nowDamage=Date.now();for(const hit of (s.damageTexts||[])){const age=nowDamage-hit.started,alpha=Math.max(0,1-age/850),rise=age/850*24,tx=hit.x*T+T/2,ty=hit.y*T+8-rise;c.save();c.globalAlpha=alpha;c.font='900 19px system-ui,sans-serif';c.textAlign='center';c.lineWidth=4;c.strokeStyle='#17120e';c.strokeText((hit.type==='hurt'?'-':'−')+hit.value,tx,ty);c.fillStyle=hit.type==='hurt'?'#7de6ff':'#fff06b';c.fillText((hit.type==='hurt'?'-':'−')+hit.value,tx,ty);c.restore()}c.restore();
+for(let y=0;y<N;y++)for(let x=0;x<N;x++)tile(x,y);for(const it of s.items)if(s.seen.has(it.x+','+it.y))drawItem(it);for(const t of s.traps)if(t.revealed&&s.seen.has(t.x+','+t.y)){c.fillStyle=t.triggered?'#a85e54':'#e0c16b';c.fillRect(t.x*T+14,t.y*T+14,12,12);c.fillStyle='#28231b';c.fillRect(t.x*T+18,t.y*T+17,4,6)}for(const e of s.enemies)if(s.seen.has(e.x+','+e.y)&&(!e.invisible||e.revealed))drawEnemy(e);if(s.seen.has('2,2')){c.fillStyle='#b48c4d';c.fillRect(2*T+10,2*T+10,20,20);c.fillStyle='#58452b';c.fillRect(2*T+16,2*T+16,8,14)}const stair=N-4;if(s.seen.has(stair+','+stair)){c.fillStyle='#63528b';c.fillRect(stair*T+8,stair*T+8,24,24);c.fillStyle='#bba7e6';c.fillRect(stair*T+13,stair*T+13,14,14)}drawHero(s.x,s.y);const nowDamage=Date.now();for(const hit of (s.damageTexts||[])){const age=nowDamage-hit.started,alpha=Math.max(0,1-age/850),rise=age/850*24,tx=hit.x*T+T/2,ty=hit.y*T+8-rise;c.save();c.globalAlpha=alpha;c.font='900 19px system-ui,sans-serif';c.textAlign='center';c.lineWidth=4;c.strokeStyle='#17120e';c.strokeText((hit.type==='hurt'?'-':'−')+hit.value,tx,ty);c.fillStyle=hit.type==='hurt'?'#7de6ff':'#fff06b';c.fillText((hit.type==='hurt'?'-':'−')+hit.value,tx,ty);c.restore()}c.restore();
 document.getElementById('hptext').textContent=s.hp+' / '+s.maxHp;document.getElementById('hpbar').style.width=s.hp/s.maxHp*100+'%';document.getElementById('leveltext').textContent='Lv'+s.level+' / 攻'+attackPower();const expNow=expForNextLevel(s.level-1),expNext=expForNextLevel(s.level);document.getElementById('expbar').style.width=Math.max(0,Math.min(100,(s.exp-expNow)/(expNext-expNow)*100))+'%';document.getElementById('foodtext').textContent=s.food+'%';document.getElementById('foodbar').style.width=s.food+'%';document.getElementById('depthtext').textContent='B'+s.depth+'F';document.getElementById('goldtext').textContent=s.gold+' G';document.getElementById('floorlabel').textContent='OLD RUINS · B'+s.depth+'F';document.getElementById('task').textContent=s.bag.length?'戦利品 '+s.bag.reduce((a,it)=>a+itemDefs[it.id].value,0)+'G相当':'足元の道具を拾ってみよう';
 let bag=document.getElementById('bag');bag.innerHTML='';for(let i=0;i<CAP;i++){let el=document.createElement('button');el.className='slot'+(i>=s.bag.length?' empty':'');if(i<s.bag.length){let it=s.bag[i],d=itemDefs[it.id];el.innerHTML='<span class="ico">'+d.icon+'</span><span class="nm">'+displayName(it)+'</span>';if(it===s.weapon||it===s.shield||it===s.bracelet)el.classList.add('equipped');el.onclick=()=>selectItem(i)}else{el.textContent='空き';el.disabled=true}bag.appendChild(el)}
 document.getElementById('bagcount').textContent=s.bag.length+'/'+CAP;
