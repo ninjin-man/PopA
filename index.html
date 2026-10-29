@@ -197,11 +197,12 @@ function makeFloor(){
   const startRoom=rooms.find(r=>r.x<=2&&r.x+r.w>2&&r.y<=2&&r.y+r.h>2)||rooms[0],connected=new Set([startRoom]);
   while(connected.size<rooms.length){
     let best=null,bestDist=Infinity;
-    for(const a of connected)for(const b of rooms)if(!connected.has(b)){const d=Math.abs(a.cx-b.cx)+Math.abs(a.cy-b.cy);if(d<bestDist){bestDist=d;best=[a,b];}}
+    for(const a of connected)for(const b of rooms)if(!connected.has(b)){const d=Math.abs(a.cx-b.cx)+Math.abs(a.cy-b.cy);if(d>=6&&d<bestDist){bestDist=d;best=[a,b];}}
+    if(!best)for(const a of connected)for(const b of rooms)if(!connected.has(b)){const d=Math.abs(a.cx-b.cx)+Math.abs(a.cy-b.cy);if(d<bestDist){bestDist=d;best=[a,b];}}
     if(!best)break;carveCorridor(best[0],best[1]);connected.add(best[1]);
   }
-  let extraLinks=0;
-  for(let i=0;i<rooms.length&&extraLinks<2;i++){const a=rooms[i],candidates=rooms.slice(i+1).filter(b=>Math.abs(a.cx-b.cx)+Math.abs(a.cy-b.cy)<=15);if(candidates.length&&Math.random()<.32){carveCorridor(a,candidates[Math.floor(Math.random()*candidates.length)]);extraLinks++;}}
+  // 追加通路は交差して幅2マスになる原因になるため生成しない。
+  s.rooms=rooms;
   const sx=2,sy=2,stair=N-4;s.tiles[sy][sx]=0;s.tiles[stair][stair]=0;
   const reachable=new Set([sx+','+sy]),queue=[[sx,sy]];
   for(let qi=0;qi<queue.length;qi++){const [x,y]=queue[qi];for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,ny=y+dy,k=nx+','+ny;if(nx>0&&ny>0&&nx<N-1&&ny<N-1&&s.tiles[ny][nx]===0&&!reachable.has(k)){reachable.add(k);queue.push([nx,ny]);}}}
