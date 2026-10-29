@@ -163,44 +163,62 @@ function defensePower(){return (s.shield?(itemDefs[s.shield.id].defense||0):0)+(
 function gainExp(amount){if(s.bracelet&&itemDefs[s.bracelet.id].braceletEffect==='fortune')amount=Math.ceil(amount*1.25);s.exp+=amount;say('経験値を'+amount+'獲得。');while(s.level<30&&s.exp>=expForNextLevel(s.level)){s.level++;const hpGain=3+Math.floor(Math.random()*3);s.maxHp+=hpGain;s.hp+=hpGain;say('レベルアップ！ Lv'+s.level+'。最大HP+'+hpGain+'、攻撃力+'+(s.level>1?1:0)+'。');}}
 function fresh(keep={}){logHistory.length=0;s={damageTexts:[],x:1,y:1,hp:14,maxHp:14,level:1,exp:0,food:100,depth:1,turn:0,powerTurns:0,quickTurns:0,guardHits:0,safeWalks:0,bracelet:null,traps:[],gold:keep.gold||0,escapes:keep.escapes||0,secured:keep.secured||0,found:keep.found||new Set(),best:keep.best||1,bag:[],weapon:null,shield:null,tiles:[],seen:new Set(),enemies:[],items:[],over:false,front:[0,1],groundPickup:null};document.getElementById('bagpanel').classList.remove('inventory-open');document.getElementById('layout').classList.add('inventory-hidden');document.getElementById('pickup').textContent='B 持ち物';document.getElementById('endwrap').style.display='none';document.getElementById('log').innerHTML='';makeFloor();say('迷宮に入った。歩くとHPが回復する。敵の特徴と道具を利用して戦利品を持ち帰ろう。');render()}
 function makeFloor(){
-  // 5×5の部屋候補から毎回17〜25室を選び、ランダムな接続路と追加ループを生成。
-  // 部屋の大きさ・位置を揺らし、一本道だけでなく分岐や袋小路を作る。
+  // BSP（空間分割）で部屋サイズを変え、部屋同士を通路で接続する。
   s.tiles=Array.from({length:N},()=>Array(N).fill(1));
-  const all=[];for(let gy=0;gy<5;gy++)for(let gx=0;gx<5;gx++)all.push({gx,gy,key:gx+','+gy});
-  const chosen=new Set(['0,0','4,4']);
-  const target=12+Math.floor(Math.random()*7);
-  while(chosen.size<target){const node=all[Math.floor(Math.random()*all.length)];chosen.add(node.key)}
-  // Start at (0,0), grow a connected random tree over the selected rooms.
-  const connected=new Set(['0,0']),edges=[];
-  while(connected.size<chosen.size){
-    const frontier=[];
-    for(const key of connected){const [x,y]=key.split(',').map(Number);for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,ny=y+dy,nk=nx+','+ny;if(chosen.has(nk)&&!connected.has(nk))frontier.push([key,nk])}}
-    if(!frontier.length){const rest=[...chosen].filter(k=>!connected.has(k));const next=rest[0];const [nx,ny]=next.split(',').map(Number);let nearest=[...connected].sort((a,b)=>{const A=a.split(',').map(Number),B=b.split(',').map(Number);return Math.abs(A[0]-nx)+Math.abs(A[1]-ny)-Math.abs(B[0]-nx)-Math.abs(B[1]-ny)})[0];edges.push([nearest,next]);connected.add(next);continue}
-    const edge=frontier[Math.floor(Math.random()*frontier.length)];edges.push(edge);connected.add(edge[1]);
+  const root={x:1,y:1,w:N-2,h:N-2,depth:0},leaves=[];
+  function splitArea(area){
+    const canV=area.w>=12,canH=area.h>=12;
+    if(area.depth>=3||(!canV&&!canH)||(area.depth>=2&&Math.random()<.28)){leaves.push(area);return;}
+    let vertical;
+    if(canV&&!canH)vertical=true;else if(canH&&!canV)vertical=false;
+    else if(area.w>area.h*1.18)vertical=true;else if(area.h>area.w*1.18)vertical=false;else vertical=Math.random()<.5;
+    const size=vertical?area.w:area.h,cut=Math.max(6,Math.min(size-6,Math.floor(size*(.38+Math.random()*.24))));
+    if(vertical){splitArea({x:area.x,y:area.y,w:cut,h:area.h,depth:area.depth+1});splitArea({x:area.x+cut,y:area.y,w:area.w-cut,h:area.h,depth:area.depth+1});}
+    else{splitArea({x:area.x,y:area.y,w:area.w,h:cut,depth:area.depth+1});splitArea({x:area.x,y:area.y+cut,w:area.w,h:area.h-cut,depth:area.depth+1});}
   }
-  // A few extra connections prevent the layout from feeling like a pure tree.
-  const edgeKeys=new Set(edges.map(e=>[e[0],e[1]].sort().join('|')));
-  for(const key of chosen){const [x,y]=key.split(',').map(Number);for(const [dx,dy] of [[1,0],[0,1]]){const nk=(x+dx)+','+(y+dy);if(chosen.has(nk)&&Math.random()<.22&&!edgeKeys.has([key,nk].sort().join('|'))){edges.push([key,nk]);edgeKeys.add([key,nk].sort().join('|'))}}}
-  const centers={};
-  for(const key of chosen){const [gx,gy]=key.split(',').map(Number),cx=2+gx*4,cy=2+gy*4;const w=1,h=1;centers[key]=[cx,cy];for(let y=Math.max(1,cy-h);y<=Math.min(N-2,cy+h);y++)for(let x=Math.max(1,cx-w);x<=Math.min(N-2,cx+w);x++)s.tiles[y][x]=0;}
-  for(const [ka,kb] of edges){const [ax,ay]=centers[ka],[bx,by]=centers[kb];if(Math.random()<.5){for(let x=Math.min(ax,bx);x<=Math.max(ax,bx);x++)s.tiles[ay][x]=0;for(let y=Math.min(ay,by);y<=Math.max(ay,by);y++)s.tiles[y][bx]=0;}else{for(let y=Math.min(ay,by);y<=Math.max(ay,by);y++)s.tiles[y][ax]=0;for(let x=Math.min(ax,bx);x<=Math.max(ax,bx);x++)s.tiles[by][x]=0;}}
+  splitArea(root);
+  const rooms=[];
+  for(const area of leaves){
+    const maxW=Math.max(4,area.w-2),maxH=Math.max(4,area.h-2);
+    const minW=Math.min(maxW,Math.max(4,Math.floor(area.w*.52))),minH=Math.min(maxH,Math.max(4,Math.floor(area.h*.52)));
+    const w=minW+Math.floor(Math.random()*(maxW-minW+1)),h=minH+Math.floor(Math.random()*(maxH-minH+1));
+    let x=area.x+1+Math.floor(Math.random()*Math.max(1,area.w-w-1));
+    let y=area.y+1+Math.floor(Math.random()*Math.max(1,area.h-h-1));
+    if(area.x===1&&area.y===1){x=2;y=2;}
+    if(area.x+area.w===N-1&&area.y+area.h===N-1){x=area.x+area.w-w-1;y=area.y+area.h-h-1;}
+    const room={x,y,w,h,cx:x+Math.floor(w/2),cy:y+Math.floor(h/2),area};rooms.push(room);
+    for(let yy=y;yy<y+h;yy++)for(let xx=x;xx<x+w;xx++)s.tiles[yy][xx]=0;
+  }
+  function carveCorridor(a,b){
+    let x=a.cx,y=a.cy;s.tiles[y][x]=0;
+    if(Math.random()<.5){while(x!==b.cx){x+=Math.sign(b.cx-x);s.tiles[y][x]=0;}while(y!==b.cy){y+=Math.sign(b.cy-y);s.tiles[y][x]=0;}}
+    else{while(y!==b.cy){y+=Math.sign(b.cy-y);s.tiles[y][x]=0;}while(x!==b.cx){x+=Math.sign(b.cx-x);s.tiles[y][x]=0;}}
+  }
+  const startRoom=rooms.find(r=>r.x<=2&&r.x+r.w>2&&r.y<=2&&r.y+r.h>2)||rooms[0],connected=new Set([startRoom]);
+  while(connected.size<rooms.length){
+    let best=null,bestDist=Infinity;
+    for(const a of connected)for(const b of rooms)if(!connected.has(b)){const d=Math.abs(a.cx-b.cx)+Math.abs(a.cy-b.cy);if(d<bestDist){bestDist=d;best=[a,b];}}
+    if(!best)break;carveCorridor(best[0],best[1]);connected.add(best[1]);
+  }
+  let extraLinks=0;
+  for(let i=0;i<rooms.length&&extraLinks<2;i++){const a=rooms[i],candidates=rooms.slice(i+1).filter(b=>Math.abs(a.cx-b.cx)+Math.abs(a.cy-b.cy)<=15);if(candidates.length&&Math.random()<.32){carveCorridor(a,candidates[Math.floor(Math.random()*candidates.length)]);extraLinks++;}}
   const sx=2,sy=2,stair=N-4;s.tiles[sy][sx]=0;s.tiles[stair][stair]=0;
+  const reachable=new Set([sx+','+sy]),queue=[[sx,sy]];
+  for(let qi=0;qi<queue.length;qi++){const [x,y]=queue[qi];for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,ny=y+dy,k=nx+','+ny;if(nx>0&&ny>0&&nx<N-1&&ny<N-1&&s.tiles[ny][nx]===0&&!reachable.has(k)){reachable.add(k);queue.push([nx,ny]);}}}
+  if(!reachable.has(stair+','+stair)){let x=sx,y=sy;while(x!==stair){x+=Math.sign(stair-x);s.tiles[y][x]=0;}while(y!==stair){y+=Math.sign(stair-y);s.tiles[y][x]=0;}}
   s.x=sx;s.y=sy;s.seen=new Set();s.enemies=[];s.items=[];s.traps=[];s.groundPickup=null;
   const occupied=(x,y)=>((x===sx&&y===sy)||(x===stair&&y===stair)||s.enemies.some(e=>e.x===x&&e.y===y)||s.items.some(i=>i.x===x&&i.y===y));
   let cells=[];for(let y=1;y<N-1;y++)for(let x=1;x<N-1;x++)if(!blocked(x,y)&&!occupied(x,y))cells.push([x,y]);
   const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};shuffle(cells);
   const types=s.depth===1?['rat','bat','rat','runner','archer','thief','tank','spitter','rat','hungry','leech']:['rat','bat','runner','archer','thief','tank','leech','hungry','spitter','alarm','rat','bat'];
-  const n=Math.min(types.length,8+Math.floor(Math.random()*4));
-  const enemyCells=shuffle(cells.filter(([x,y])=>Math.max(Math.abs(x-sx),Math.abs(y-sy))>3&&Math.max(Math.abs(x-stair),Math.abs(y-stair))>1));
+  const n=Math.min(types.length,8+Math.floor(Math.random()*4)),enemyCells=shuffle(cells.filter(([x,y])=>Math.max(Math.abs(x-sx),Math.abs(y-sy))>3&&Math.max(Math.abs(x-stair),Math.abs(y-stair))>1));
   for(let i=0;i<n&&enemyCells.length;i++){const [x,y]=enemyCells.pop(),type=types[i],inf=enemyInfo[type];s.enemies.push({x,y,type,hp:inf.hp+Math.floor((s.depth-1)*1.1),atk:inf.atk+Math.floor((s.depth-1)*.6),sleep:0,alert:0,targetX:null,targetY:null,stole:false,drainCooldown:0});}
   const enemySet=new Set(s.enemies.map(e=>e.x+','+e.y));cells=cells.filter(([x,y])=>!enemySet.has(x+','+y));
-  const trapCount=3+Math.floor(Math.random()*3);const trapTypes=['spike','pit','snare','alarm'];for(let i=0;i<trapCount&&cells.length;i++){const j=Math.floor(Math.random()*cells.length),[x,y]=cells.splice(j,1)[0];s.traps.push({x,y,type:trapTypes[Math.floor(Math.random()*trapTypes.length)],revealed:false,triggered:false});}
+  const trapCount=3+Math.floor(Math.random()*3),trapTypes=['spike','pit','snare','alarm'];for(let i=0;i<trapCount&&cells.length;i++){const j=Math.floor(Math.random()*cells.length),[x,y]=cells.splice(j,1)[0];s.traps.push({x,y,type:trapTypes[Math.floor(Math.random()*trapTypes.length)],revealed:false,triggered:false});}
   const pool=s.depth===1?['herb','scroll','seed','potion','stone','sword','shortSword','club','shield','leatherShield','bronzeShield','stone','rice','berry','hardBread','ironStone','sleepHerb','strengthHerb','knockStaff','hungerBracelet']:['herb','scroll','seed','potion','stone','escape','poison','broadSword','ironSword','katana','battleAxe','ironShield','heavyShield','spikedShield','dragonShield','rice','bigRice','driedMeat','ironStone','poisonDart','sleepStaff','slowStaff','swapStaff','hungerBracelet','powerBracelet','healJar','identifyJar','mapScroll','blastScroll'];
   if(s.depth>=3)pool.push('relic','crystalBlade','windBlade','towerShield','windShield','lightningStaff','sealStaff','fortuneBracelet','dodgeBracelet','escapeJar','royalMeal','heavyRock','changeJar','powerScroll');
-  // 図鑑に載る道具は実際の抽選候補にも入れる。希少品だけは深層限定。
   const rareIds=new Set(['relic','crystalBlade','windBlade','towerShield','windShield','lightningStaff','sealStaff','fortuneBracelet','dodgeBracelet','escapeJar','royalMeal','heavyRock','changeJar','powerScroll']);
-  for(const id of Object.keys(itemDefs)){if(!pool.includes(id)&&(s.depth>=3||!rareIds.has(id))&&!(itemDefs[id].kind==='treasure'&&s.depth<3))pool.push(id)}
-  // 道具は2〜8個。深層でも数を一律に増やさず、内容の質と危険度で差をつける。
+  for(const id of Object.keys(itemDefs)){if(!pool.includes(id)&&(s.depth>=3||!rareIds.has(id))&&!(itemDefs[id].kind==='treasure'&&s.depth<3))pool.push(id);}
   const count=Math.random()<.15?0:1+Math.floor(Math.random()*5);for(let i=0;i<count&&cells.length;i++){const [x,y]=cells.pop();s.items.push(makeItem(x,y,pool[Math.floor(Math.random()*pool.length)]));}
   s.best=Math.max(s.best,s.depth);
 }
